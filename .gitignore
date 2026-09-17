@@ -1,0 +1,16 @@
+# Secrets – ska aldrig committas (nyckeln bor i webbläsarens localStorage)
+.env
+.env.*
+*.env
+secrets/
+vault-*.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Råmaterial / transkript (hör inte hemma i appens repo)
+*.vtt
+*.srt

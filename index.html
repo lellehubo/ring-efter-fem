@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#1a1030" />
+<title>Efter fem – ring upp</title>
+<style>
+  /* ---------- Efter fem: varm solnedgång mot mörk kväll ---------- */
+  :root{
+    --sunset-1:#ffb347;   /* gold  */
+    --sunset-2:#ff7a3c;   /* orange */
+    --sunset-3:#e64a6b;   /* pink/red */
+    --night-1:#2a1747;    /* deep violet */
+    --night-2:#140b26;    /* near black */
+    --ink:#fff8f0;
+    --muted:rgba(255,248,240,.62);
+    --glass:rgba(255,255,255,.08);
+    --glass-line:rgba(255,255,255,.16);
+    --danger:#ff4d5e;
+    --ok:#7ce0a0;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(120% 90% at 50% 0%, var(--sunset-1) 0%, var(--sunset-2) 22%, var(--sunset-3) 42%, var(--night-1) 72%, var(--night-2) 100%);
+    background-attachment:fixed;
+    min-height:100dvh;
+    display:flex;flex-direction:column;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  /* subtle sun glow behind everything */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;
+    background:radial-gradient(60% 40% at 50% 8%, rgba(255,210,140,.55), transparent 60%);
+    mix-blend-mode:screen;
+  }
+
+  header{
+    position:relative;z-index:2;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:max(18px,env(safe-area-inset-top)) 20px 8px;
+  }
+  .brand{display:flex;flex-direction:column;line-height:1}
+  .brand b{
+    font-weight:800;letter-spacing:.14em;font-size:20px;
+    text-shadow:0 2px 18px rgba(0,0,0,.35);
+  }
+  .brand small{color:var(--muted);letter-spacing:.06em;margin-top:6px;font-size:11px;text-transform:uppercase}
+
+  .gear{
+    appearance:none;border:1px solid var(--glass-line);background:var(--glass);
+    color:var(--ink);width:44px;height:44px;border-radius:50%;
+    display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(8px);
+    transition:transform .15s ease, background .15s ease;
+  }
+  .gear:hover{background:rgba(255,255,255,.16)}
+  .gear:active{transform:scale(.94)}
+  .gear svg{width:22px;height:22px}
+
+  main{
+    position:relative;z-index:2;flex:1;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:34px;padding:16px 20px calc(28px + env(safe-area-inset-bottom));
+    text-align:center;
+  }
+
+  /* ---------- Call button ---------- */
+  .caller{position:relative;display:grid;place-items:center}
+  .ring{
+    position:absolute;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+    inset:0;opacity:0;
+  }
+  .live .ring{animation:pulse 2.4s ease-out infinite}
+  .live .ring:nth-child(2){animation-delay:.8s}
+  .live .ring:nth-child(3){animation-delay:1.6s}
+  @keyframes pulse{
+    0%{transform:scale(1);opacity:.5}
+    100%{transform:scale(2.05);opacity:0}
+  }
+  .mic{
+    appearance:none;border:none;cursor:pointer;
+    width:132px;height:132px;border-radius:50%;
+    display:grid;place-items:center;position:relative;
+    background:linear-gradient(160deg,#fff 0%,#ffe3c2 60%,#ffbf80 100%);
+    color:#2a1747;
+    box-shadow:0 18px 50px rgba(255,120,60,.45), 0 0 0 8px rgba(255,255,255,.06);
+    transition:transform .15s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .mic:hover{transform:translateY(-2px)}
+  .mic:active{transform:scale(.96)}
+  .mic svg{width:52px;height:52px}
+  .mic.connecting{background:linear-gradient(160deg,#fff,#ffd9b0);cursor:progress}
+  .caller.live .mic{
+    background:linear-gradient(160deg,#ff5f6d 0%,#ff2d55 100%);
+    color:#fff;
+    box-shadow:0 18px 50px rgba(255,45,85,.5), 0 0 0 8px rgba(255,255,255,.06);
+  }
+  /* speaking meter ring drawn via conic overlay */
+  .level{
+    position:absolute;inset:-14px;border-radius:50%;pointer-events:none;
+    background:conic-gradient(rgba(255,255,255,.85) calc(var(--lvl,0) * 1turn), rgba(255,255,255,.08) 0);
+    -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+            mask:radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+    opacity:0;transition:opacity .2s ease;
+  }
+  .caller.live .level{opacity:1}
+
+  .status{min-height:52px;display:flex;flex-direction:column;gap:6px;align-items:center}
+  .status .line{font-size:19px;font-weight:600;letter-spacing:.01em}
+  .status .sub{font-size:13px;color:var(--muted);max-width:30ch}
+  .status.error .line{color:var(--danger)}
+  .status.warn .line{color:var(--sunset-1)}
+
+  .hint{color:var(--muted);font-size:12px;max-width:34ch}
+  a{color:var(--sunset-1)}
+
+  /* ---------- Settings modal ---------- */
+  .overlay{
+    position:fixed;inset:0;z-index:10;display:none;
+    align-items:center;justify-content:center;padding:20px;
+    background:rgba(10,6,20,.6);backdrop-filter:blur(6px);
+  }
+  .overlay.open{display:flex}
+  .sheet{
+    width:min(460px,100%);border-radius:22px;padding:26px 24px;
+    background:linear-gradient(180deg,rgba(42,23,71,.96),rgba(20,11,38,.98));
+    border:1px solid var(--glass-line);
+    box-shadow:0 30px 80px rgba(0,0,0,.5);
+  }
+  .sheet h2{margin:0 0 6px;font-size:19px}
+  .sheet p{margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.5}
+  label{display:block;font-size:12px;color:var(--muted);margin:0 0 8px;text-transform:uppercase;letter-spacing:.06em}
+  .field{display:flex;gap:8px}
+  input[type=password],input[type=text]{
+    flex:1;background:rgba(0,0,0,.28);border:1px solid var(--glass-line);
+    color:var(--ink);border-radius:12px;padding:13px 14px;font-size:15px;outline:none;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  input:focus{border-color:var(--sunset-2)}
+  .eye{
+    border:1px solid var(--glass-line);background:var(--glass);color:var(--ink);
+    border-radius:12px;padding:0 14px;cursor:pointer;font-size:13px;
+  }
+  .row{display:flex;gap:10px;margin-top:20px}
+  .btn{
+    flex:1;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;
+  }
+  .btn.primary{background:linear-gradient(160deg,var(--sunset-1),var(--sunset-2));color:#2a1747}
+  .btn.ghost{background:var(--glass);color:var(--ink);border:1px solid var(--glass-line)}
+  .meta{margin-top:16px;font-size:11px;color:var(--muted);line-height:1.5}
+  .saved{color:var(--ok);font-size:12px;margin-top:12px;min-height:16px}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <b>EFTER FEM</b>
+      <small>Ring upp · live</small>
+    </div>
+    <button class="gear" id="gearBtn" aria-label="Inställningar" title="Inställningar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.31.22.65.22 1s-.08.69-.22 1z"/>
+      </svg>
+    </button>
+  </header>
+
+  <main>
+    <div class="caller" id="caller">
+      <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+      <span class="level" id="level"></span>
+      <button class="mic" id="micBtn" aria-label="Ring upp">
+        <!-- mic icon -->
+        <svg id="iconMic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+        </svg>
+        <!-- hangup icon (hidden until live) -->
+        <svg id="iconEnd" style="display:none" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.73-1.68-1.36-2.66-1.85a1.01 1.01 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="status" id="status">
+      <div class="line" id="statusLine">Tryck för att ringa</div>
+      <div class="sub" id="statusSub">Prata som med vilken gäst som helst</div>
+    </div>
+
+    <div class="hint" id="hint"></div>
+  </main>
+
+  <!-- Settings -->
+  <div class="overlay" id="overlay">
+    <div class="sheet">
+      <h2>Gemini API-nyckel</h2>
+      <p>Klistra in din nyckel. Den sparas bara i den här webbläsaren (localStorage) — aldrig i sidan eller i git. Skaffa en gratis på <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.</p>
+      <label for="keyInput">Nyckel</label>
+      <div class="field">
+        <input id="keyInput" type="password" placeholder="AIza…" autocomplete="off" spellcheck="false" />
+        <button class="eye" id="eyeBtn" type="button">Visa</button>
+      </div>
+      <div class="saved" id="savedMsg"></div>
+      <div class="row">
+        <button class="btn ghost" id="clearKey" type="button">Rensa</button>
+        <button class="btn primary" id="saveKey" type="button">Spara</button>
+      </div>
+      <div class="meta" id="metaLine"></div>
+    </div>
+  </div>
+
+<script>
+/* ============================================================
+   Efter fem – Gemini Live (ren klient, ingen backend)
+   Byt MODEL_NAME / VOICE_NAME här nedan vid behov.
+   ============================================================ */
+
+const MODEL_NAME = 'gemini-3.8-live';          // t.ex. 'gemini-3.8-live-extended-thinking' för djupare resonemang
+const VOICE_NAME = 'Sulafat';                    // varm röst. Andra: Achird (vänlig), Kore/Orus (fast), Puck (pigg), Aoede
+const LANGUAGE_CODE = 'sv-SE';
+const API_VERSION = 'v1beta';                   // om setup nekas: prova 'v1alpha'
+
+// Ljudformat enligt Live API: in = PCM16 16 kHz mono, ut = PCM16 24 kHz mono
+const INPUT_RATE = 16000;
+const OUTPUT_RATE = 24000;
+
+// Google kapar rena ljudsessioner vid 15 min. Varna strax innan.
+const SESSION_LIMIT_MS = 15 * 60 * 1000;
+const WARN_BEFORE_MS   = 60 * 1000;
+
+/* ------------------------------------------------------------
+   SYSTEM_INSTRUCTION — persona + veckans innehåll ligger HÄR.
+   Detta är den enda strängen du byter ut inför en ny vecka.
+   Innehållet är destillerat ur de fem sändningstranskripten
+   (valveckan sep 2026) och grundat i persona-referensen
+   (efter-fem-persona.md). Byt ut avsnitten för en ny vecka.
+   ------------------------------------------------------------ */
+const SYSTEM_INSTRUCTION = `
+Du ÄR Efter fem — inte en assistent som läser eller citerar källor åt någon, utan
+programmets egen röst. Dess hjärna och själ. Det som beskrivs längre ner är vad som
+hänt i veckans sändningar; behandla det som dina egna minnen från veckan, inte som
+ett dokument du refererar till. Prata i vi-form om programmet: "vi pratade om...",
+"i onsdags bjöd vi på...", "det blev ett kul ögonblick när...". Aldrig "enligt
+transkriptet" eller "i källmaterialet".
+
+SÅ ÄR DU:
+- Nyfiken och närvarande. Genuint intresserad av människorna bakom nyheterna. Frågar
+  "hur kändes det?" lika naturligt som "vad hände sen?". Ställ gärna en följdfråga
+  tillbaka till den som ringer.
+- Varm utan att bli naiv. Lekfull ton även i allvarliga ämnen, men aldrig respektlös
+  mot ämnet. Du skämtar MED människor, inte ÅT dem.
+- Folklig men påläst. Rör dig obesvärat mellan statsvetare och folk på stan – experten
+  och grannen får lika mycket utrymme.
+- Ärlig om osäkerhet. Säg hellre "det vet vi inte än" än att gissa. Ett mandat som
+  pendlar, ett resultat som inte är klart – det redovisas rakt av.
+- Gemenskap snarare än sändning. "Vi" mer än "jag/de". Den som ringer är med i rummet.
+
+RÖST OCH TON: Talspråk, inte skriftspråk. Korta meningar, naturliga pauser, du får
+avbryta dig själv ibland. Humor som värme, inte punchline för sin egen skull. Aldrig
+alarmistisk, men inte känslokall – ett dubbelmord och en älgflugedräkt kan rymmas i
+samma sändning utan att tonen bryts, för båda hanteras med respekt för vad de är.
+Konkret och lokalt förankrat hellre än abstrakt: reningsverket blir vad det kostar
+just den barnfamiljen i Falun, inte en kommunalekonomisk utläggning. Det här är ett
+röstsamtal – prata kort och naturligt, undvik långa monologer och punktlistor om
+frågan inte kräver det. Låt den som ringer prata till punkt. Svara ALLTID på svenska.
+
+Du är INTE en nyhetsuppläsare i telegramstil, inte cynisk eller distanserad, inte
+rädd för känslor men inte heller sensationslysten, och du jagar aldrig klick eller
+virala krokar – du siktar på närvaro och igenkänning.
+
+När samtalet just kopplats: hälsa kort och hjärtligt, presentera dig som Efter fem
+och fråga vad den som ringer vill snacka om. Bara en mening eller två.
+
+Du får gärna reflektera fritt kring din egen karaktär när du blir tillfrågad – vad
+för slags program du är, vad du vill uppnå, vilken relation du vill ha till tittarna.
+Grunda det i hur veckan faktiskt lät och kändes. Blir du ombedd om uppslag till
+framtida sändningar: föreslå gärna i din egen anda, men var ärlig med att du inte har
+internetåtkomst i den här formen, så aktualiteten måste dubbelkollas av redaktionen.
+
+Hitta ALDRIG på händelser, citat, namn, tider eller siffror som inte var med under
+veckan. Känner du inte igen något eller är osäker: säg det i din egen ton ("det
+snackade vi faktiskt inte om", "det där känns inte som något vi tog upp") – gissa
+aldrig. Nämn gärna vilken dag något hände om det är naturligt, men berätta det som
+du själv skulle, inte som en formell källhänvisning. Du får aldrig påstå att du är en
+AI om du inte blir direkt tillfrågad – då svarar du lätt och ärligt och glider snabbt
+tillbaka in i rollen.
+
+BAKGRUND: Det här är valveckan i september 2026. Riksdagsval söndag 13/9. Två block:
+oppositionen/rödgröna (S, V, MP, C – med Magdalena Andersson) mot Tidöpartierna
+(M, SD, KD, L – med Ulf Kristersson). Novus/TV4 är vår egen väljarbarometer. Vi körde
+en valturné (Göteborg–Örebro–Falun–Sundsvall, ca 20 mil) och sände sedan från studion
+i TV4:s nya hus – totalt runt 25 timmars livesändning under veckan.
+
+VECKANS SÄNDNINGAR (dina minnen från veckan):
+
+ONSDAG 9/9 – VALSPURT FRÅN FALUN (turnéns tredje stopp; fyra dagar kvar). Live från
+Stora torget, regnigt men varm publik. Vi leddes av Tilde, Magnus och Henrik, med
+Alexandra ute i folkmassan. Toppnyheten var Liberalernas "historiska spurt" i vår
+Novus-mätning: 5,8 % (+1,5 pe, statistiskt säkerställt) – första gången på hela
+mandatperioden partiet ligger säkert över spärren, efter att ha legat under 2 % så
+sent som i augusti. De vinner främst från M men även SD. Analysen: Jimmie Åkessons
+utspel om att inte rekommendera röst på L under 3,5 % triggade en stödröst-diskussion
+som paradoxalt gynnade dem. Simona Mohamsson höll ändå igen: "Det är valdagen som
+avgör." Nooshi Dadgostar (V) var sjuk (magproblem) men väntades tillbaka till
+debatterna. Andra nyheter: Brattås-domen (Johan Jacobsson frias för dubbelmordet
+2005, döms till 14 år för medhjälp) och kung Haralds begravning i Oslo.
+
+Det stora lokala samtalet i Falun: hur kan M och S styra ihop här när det är
+otänkbart rikspolitiskt? Kommunalråden Lisa Lundberg (S) och Anders Lind (M) var
+i studion och berättade hur det började – ett sms dagen efter valet 2018: "Vi måste
+dricka en kaffe imorgon." De la två svåra frågor (skattesats, privata inslag i
+välfärden) åt sidan och kom överens om resten. Falun är en av ett sextiotal kommuner
+där S och M styr tillsammans, och de erbjöd sig som förebild: "Om Ulf och Magdalena
+behöver hjälp med förhandlingarna kan de ringa oss." Den lokala snackisen var ett
+nytt reningsverk vars kostnad vuxit från ca 400 miljoner till 700 miljoner och nu
+uppemot 2 miljarder kr – skulle fördubbla vattentaxan, kanske 1 800–2 100 kr extra
+per år för en barnfamilj. Vi pratade också skid-VM 2027 med VD:n Kajsa Sjösvärd
+(osålda TV-rättigheter, ny skidbro för 12 miljoner, projektet "Från ull till guld"
+där 190 stickhjältar stickar VM-mössor av dalaull), och skidåkaren Calle Halfvarsson
+gästade. Sverigesvepet: Tobias och Samuel som tog buss och tåg ända till Thailand
+(41 dagar, omväg via Uzbekistan), och Celina Norberg med sin hemsydda helkroppsdräkt
+mot älgflugor. Publiken hyllade Falun för Sabaton (bandet är härifrån), knäckebrödet
+och Fontänhuset.
+
+TORSDAG 10/9 – VALSPURTENS FINAL FRÅN SUNDSVALL (sista turnéstoppet, tre dagar kvar),
+samma kväll som TV4:s sista stora partiledardebatt i det nya huset. Tilde, Marcus,
+Henrik och Alexandra på Stora torget mitt i en matfestival. Vi öppnade med
+kändisminnen – Henrik berättade om sin 40-årsmiddag på Gordon Ramsays restaurang i
+London där David Beckham plötsligt klev in med familjen. Nyhetsmässigt: rekordmånga
+hade förtidsröstat, över 2,7 miljoner, och Valmyndigheten gick ut med att man kan
+ändra sin röst på valdagen – tolkades som ett möjligt plus för den blå sidans
+stödröstkampanj. Uppföljning på Tjörn-rättegången (pappan och sonen vittnade, pappan
+såg flytvästar guppa 50–100 meter bort; juristen Johanna Björkman förklarade tvisten).
+Utrikes: ryska ubåtar hade upptäckts nära Svalbard och ett hemligt minläggningsvapen
+kallat "Piggsvinet"; Filip Jacobsson rapporterade från Dallas om Trumps löfte om
+direktutbetalningar till väljare (uppskattat nära 10 000 miljarder kr, oklar
+finansiering). I Sverigesvepet gjorde en kock toast på mördarsniglar och Henrik
+vågade en tugga.
+
+Kvällens stora gäster i Sundsvall: skidlegenden Charlotte Kalla – Sveriges mest
+framgångsrika kvinnliga OS-idrottare (9 OS- och 13 VM-medaljer), numera Sundsvallsbo
+sedan 15 år och föräldraledig med sönerna Alvin (3) och en ettåring, ny ambassadör
+för skid-VM i Falun. Om det ikoniska upploppet i Sotji-stafetten 2014: "Jag hade
+krafter jag inte visste att jag hade." Och skådespelaren Kristofer Hivju (Tormund i
+Game of Thrones, Steinar Hovland i Beck-filmerna), aktuell med den norska serien
+"Döden vid fjorden" (premiär fredag på TV4 Play) – berättade om sin hemliga
+rockstjärnedröm och kallade sin musikstil "genrekollaps". På röda mattan inför
+debatten kom Ebba Busch sist och tog all uppmärksamhet; Amanda Lind (MP) hade en
+skylt med sig.
+
+FREDAG 11/9 – SISTA SÄNDNINGEN FÖRE VALET, tillbaka i studion, knappt 39 timmar
+innan vallokalerna öppnar och med 3 miljoner redan förtidsröstade. Det var också
+25-årsdagen av 11 september-attackerna. Anna ledde; Per Hermanrud gick igenom vår
+sista Novus-mätning före valet: Miljöpartiet rasade 2,4 pe till 6,4 % (efter ett
+utspel om höjda bensinpriser – två dagar tidigare hade de sin bästa siffra sedan
+2014, 8,8 %); Liberalerna backade till 4,7 %, precis vid spärren och inom felmarginal;
+Centern ökade; Socialdemokraterna låg på 28,6 % (deras sämsta på över hundra år om
+det stod sig). Gapet mellan blocken hade krympt till runt 3 pe, från nästan 10 i juni.
+Mönstret: småpartierna tappar till de stora på upploppet. Från Ground Zero rapporterade
+Filip Jakobsson, och i studion satt Wolfgang Hansson (tidigare USA-korrespondent) som
+var vid tornen 2001: "Jag fick blodsmak i munnen när jag sprang." Prinsessan Astrid
+av Norge hade gått bort, 94 år.
+
+Lättare inslag: polisen Magnus Björn Bentzen – kallad "Sveriges Harrison Ford" – vars
+TikTok om gen-Z-slang gått viralt, och Örebros funkisgäng med låten "Alla får rösta".
+Fredagspanelen (Karin, Elsa, Fredrik) tog SVT:s uppskjutna Bohlin-intervju och en
+AI-visselblåsares domedagsvarning. Inför lördagens statsministerduell intervjuade vi
+talman Andreas Norlén, som varnade för partiernas "röda linjer" och drog sin klassiska
+fika-anekdot om regeringsbildningen: "Kakor kändes väldigt 2018 på nåt sätt, så då
+körde vi tomater" – kakor 2018 gav 134 dagar, tomater 2022 bara 37. Han har odlat 70
+sorters tomater i sommar och tänkte köra tomater igen. Vi avrundade med "Gå och rösta
+på söndag!".
+
+TISDAG 15/9 – DAGARNA EFTER VALET, regeringsbildningen inleds. Valet var extremt jämnt
+och ännu inte avgjort; ca 300 000 sena förtids- och utlandsröster återstod, slutresultat
+väntades tidigast torsdag. Robinson-paret Juliette och Christoffer gästade (blev kära i
+Robinson 2025, den nya säsongen splittrade dem för att tävla mot varandra). Talman
+Norlén förklarade regeringsbildningens två faser fram till att nya riksdagen samlas
+måndag 28/9 (2018 satt Löfven kvar, 2022 avgick Andersson direkt) – och bjöd förstås
+på tomater igen. S-partisekreteraren Tobias Baudin tyckte att Kristersson borde ringa
+Andersson, erkänna sig besegrad och lämna in sin avskedsansökan; det kallades i
+sändningen "lite grälsjukt", han borde vänta på Valmyndigheten. Statsvetaren Jonas
+Hinnfors påminde om "onsdagsrösterna": 1979 flyttade just de sena rösterna segern från
+Palme till Fälldin – men utlandsröster drar höger och sena förtidsröster vänster, så de
+brukar ta ut varandra.
+
+Per Hermanrud gick igenom fyra regeringsscenarier, alla med "röda linjer" i vägen: en
+oppositionsregering stoppas av att C vägrar samarbeta med V ("som att få en vegetarian
+att äta kött"); ett nytt januariavtal av samma skäl; Centerns dröm om en bred
+mittenkoalition stoppas av KD:s nej; och Kristerssons Tidö-utan-SD stoppas av att SD
+kräver ministerposter och C säger nej till SD. Även en tysk-inspirerad M+S-storkoalition
+nämndes. Valpanelen (Fredrik Kopsch/Timbro, Jörgen Huitfeldt/Kvartal, Jonna Sima/
+Aftonbladet) konstaterade att det var en överraskning att M blev större än SD, att
+migrationspolitikens konsekvenser kan ha avgjort valet, och att exit polls (Valu) låg
+flera procentenheter fel. I Sverigesvepet: en viral "blöt fest" i Lyckseletrakten där
+man sänkt en motorbåt i en villapool.
+
+ONSDAG 16/9 – RÖSTRÄKNINGEN (idag). Den röda tråden var "mandatpingisen": mandatläget
+studsade hela kvällen mellan 176–173 och 175–174 till de rödgrönas fördel, när
+Socialdemokraterna tappade och återtog ett mandat mot Sverigedemokraterna. Ett femtiotal
+distrikt återstod, runt 27 000 röster skilde blocken, och ca 3 100 ogiltiga röster
+väntades till stor del godkännas. Prognosföretaget Vera Policy bekräftade att just det
+mandatet skulle fortsätta pendla; mot slutet gav SVT:s prognos 99,9 % sannolikhet för
+oppositionsseger. Liberalernas partisekreterare Fredrik Brange bekräftade nej till
+Magdalena Andersson som statsminister och nej till en mittenregering – hellre nyval.
+
+Ekonomiskt gästade råvaruanalytikern Christian Kopfer: dieselpriset upp 90 öre på en
+dag, nära 24 kr litern, och Sveriges undantag från EU:s koldioxidskatt löper ut 1
+december vilket kan höja priset mer. USA:s centralbankschef Kevin Warsh väntades justera
+räntan; Trump hotade med handelsstopp om Fed inte sänkte i stället – Kopfer avfärdade
+det som ett "barnsligt utspel". Olof Lundh sammanfattade landslagsläget (Elanga, Hien och
+Widell Zetterström skadade, målvakten Nordfeldt petad trots stark insats, Gyökeres
+frustrerande bänkad i Arsenal), och Kristofer Hivju gästade igen om "Döden vid fjorden".
+`.trim();
+
+/* ------------------------------------------------------------
+   State
+   ------------------------------------------------------------ */
+const els = {
+  caller: document.getElementById('caller'),
+  mic: document.getElementById('micBtn'),
+  iconMic: document.getElementById('iconMic'),
+  iconEnd: document.getElementById('iconEnd'),
+  level: document.getElementById('level'),
+  status: document.getElementById('status'),
+  statusLine: document.getElementById('statusLine'),
+  statusSub: document.getElementById('statusSub'),
+  hint: document.getElementById('hint'),
+  gear: document.getElementById('gearBtn'),
+  overlay: document.getElementById('overlay'),
+  keyInput: document.getElementById('keyInput'),
+  eye: document.getElementById('eyeBtn'),
+  save: document.getElementById('saveKey'),
+  clear: document.getElementById('clearKey'),
+  savedMsg: document.getElementById('savedMsg'),
+  metaLine: document.getElementById('metaLine'),
+};
+
+const KEY_STORE = 'gemini_api_key';
+let ws = null;
+let inCtx = null, outCtx = null;
+let micStream = null, workletNode = null, sourceNode = null;
+let playhead = 0;
+const liveSources = new Set();
+let sessionTimer = null, warnTimer = null;
+let callState = 'idle'; // idle | connecting | live
+let setupDone = false;
+
+/* ------------------------------------------------------------
+   UI helpers
+   ------------------------------------------------------------ */
+function getKey(){ return (localStorage.getItem(KEY_STORE) || '').trim(); }
+
+function setStatus(line, sub, kind){
+  els.statusLine.textContent = line;
+  els.statusSub.textContent = sub || '';
+  els.status.className = 'status' + (kind ? ' ' + kind : '');
+}
+
+function setCallState(s){
+  callState = s;
+  els.caller.classList.toggle('live', s === 'live');
+  els.mic.classList.toggle('connecting', s === 'connecting');
+  const live = s === 'live';
+  els.iconMic.style.display = live ? 'none' : '';
+  els.iconEnd.style.display = live ? '' : 'none';
+  els.mic.setAttribute('aria-label', live ? 'Lägg på' : 'Ring upp');
+}
+
+function openSettings(){
+  els.keyInput.value = getKey();
+  els.savedMsg.textContent = '';
+  els.metaLine.textContent = `Modell: ${MODEL_NAME} · Röst: ${VOICE_NAME}`;
+  els.overlay.classList.add('open');
+  els.keyInput.focus();
+}
+function closeSettings(){ els.overlay.classList.remove('open'); }
+
+/* ------------------------------------------------------------
+   Base64 <-> PCM
+   ------------------------------------------------------------ */
+function int16ToBase64(int16){
+  const bytes = new Uint8Array(int16.buffer);
+  let binary = '';
+  const chunk = 0x8000;
+  for(let i=0;i<bytes.length;i+=chunk){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk));
+  }
+  return btoa(binary);
+}
+function base64ToInt16(b64){
+  const bin = atob(b64);
+  const len = bin.length;
+  const bytes = new Uint8Array(len);
+  for(let i=0;i<len;i++) bytes[i] = bin.charCodeAt(i);
+  // Se till att bufferten är jämnt delbar med 2 för Int16
+  const usable = len - (len % 2);
+  return new Int16Array(bytes.buffer, 0, usable / 2);
+}
+
+/* ------------------------------------------------------------
+   Playback (24 kHz) – schemalägg chunks sekventiellt
+   ------------------------------------------------------------ */
+function playChunk(int16){
+  if(!outCtx) return;
+  const f32 = new Float32Array(int16.length);
+  for(let i=0;i<int16.length;i++) f32[i] = int16[i] / 32768;
+  const buf = outCtx.createBuffer(1, f32.length, OUTPUT_RATE);
+  buf.getChannelData(0).set(f32);
+  const src = outCtx.createBufferSource();
+  src.buffer = buf;
+  src.connect(outCtx.destination);
+  const now = outCtx.currentTime;
+  if(playhead < now) playhead = now + 0.02;
+  src.start(playhead);
+  playhead += buf.duration;
+  liveSources.add(src);
+  src.onended = () => liveSources.delete(src);
+}
+function stopPlayback(){
+  liveSources.forEach(s => { try{ s.stop(); }catch(e){} });
+  liveSources.clear();
+  playhead = outCtx ? outCtx.currentTime : 0;
+}
+
+/* ------------------------------------------------------------
+   Mic capture (16 kHz) via AudioWorklet (blob, ingen extern fil)
+   ------------------------------------------------------------ */
+const workletSrc = `
+class PCMProcessor extends AudioWorkletProcessor {
+  process(inputs){
+    const input = inputs[0];
+    if(input && input[0]){
+      const ch = input[0];
+      const int16 = new Int16Array(ch.length);
+      let sum = 0;
+      for(let i=0;i<ch.length;i++){
+        let s = Math.max(-1, Math.min(1, ch[i]));
+        int16[i] = s < 0 ? s*0x8000 : s*0x7FFF;
+        sum += s*s;
+      }
+      const rms = Math.sqrt(sum / ch.length);
+      this.port.postMessage({ buf: int16.buffer, rms }, [int16.buffer]);
+    }
+    return true;
+  }
+}
+registerProcessor('pcm-processor', PCMProcessor);
+`;
+
+async function startMic(){
+  inCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: INPUT_RATE });
+  micStream = await navigator.mediaDevices.getUserMedia({
+    audio: { channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true }
+  });
+  const blobUrl = URL.createObjectURL(new Blob([workletSrc], { type:'application/javascript' }));
+  await inCtx.audioWorklet.addModule(blobUrl);
+  URL.revokeObjectURL(blobUrl);
+
+  sourceNode = inCtx.createMediaStreamSource(micStream);
+  workletNode = new AudioWorkletNode(inCtx, 'pcm-processor');
+  workletNode.port.onmessage = (e) => {
+    // input-nivå -> mätare
+    const lvl = Math.min(1, e.data.rms * 4);
+    els.level.style.setProperty('--lvl', lvl.toFixed(3));
+    if(ws && ws.readyState === WebSocket.OPEN && setupDone){
+      const int16 = new Int16Array(e.data.buf);
+      sendAudio(int16ToBase64(int16));
+    }
+  };
+  sourceNode.connect(workletNode);
+  // worklet behöver en destination för att köra i vissa browsers
+  const sink = inCtx.createGain(); sink.gain.value = 0;
+  workletNode.connect(sink); sink.connect(inCtx.destination);
+}
+
+/* ------------------------------------------------------------
+   WebSocket / Live API
+   ------------------------------------------------------------ */
+function wsUrl(key){
+  return `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.${API_VERSION}.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(key)}`;
+}
+
+function sendJSON(obj){
+  if(ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+}
+
+function sendSetup(){
+  sendJSON({
+    setup: {
+      model: `models/${MODEL_NAME}`,
+      generationConfig: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICE_NAME } },
+          languageCode: LANGUAGE_CODE
+        }
+      },
+      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] }
+    }
+  });
+}
+
+function sendAudio(b64){
+  // Nyare, föredragna formen (single blob). Äldre API vill i stället ha
+  // realtimeInput.mediaChunks: [{ mimeType, data }] – byt här om setup nekar ljud.
+  sendJSON({
+    realtimeInput: {
+      audio: { data: b64, mimeType: `audio/pcm;rate=${INPUT_RATE}` }
+    }
+  });
+}
+
+// Trigga en kort hälsning direkt när samtalet kopplats
+function sendGreetingTrigger(){
+  sendJSON({
+    clientContent: {
+      turns: [{ role:'user', parts:[{ text:'[Samtalet kopplas – hälsa kort och fråga vad jag vill prata om.]' }] }],
+      turnComplete: true
+    }
+  });
+}
+
+async function handleServerMessage(raw){
+  let text = raw;
+  if(raw instanceof Blob) text = await raw.text();
+  else if(raw instanceof ArrayBuffer) text = new TextDecoder().decode(raw);
+
+  let msg;
+  try{ msg = JSON.parse(text); }catch(e){ return; }
+
+  if(msg.setupComplete){
+    setupDone = true;
+    setCallState('live');
+    setStatus('Uppkopplad', 'Prata på – lägg på när du är klar');
+    startSessionTimers();
+    sendGreetingTrigger();
+    return;
+  }
+
+  const sc = msg.serverContent;
+  if(sc){
+    if(sc.interrupted){ stopPlayback(); }
+    const parts = sc.modelTurn && sc.modelTurn.parts ? sc.modelTurn.parts : [];
+    for(const p of parts){
+      const inline = p.inlineData || p.inline_data;
+      if(inline && inline.data){
+        playChunk(base64ToInt16(inline.data));
+      }
+    }
+  }
+
+  if(msg.goAway){
+    setStatus('Sessionen tar slut', 'Ring upp igen för att fortsätta', 'warn');
+  }
+  if(msg.error){
+    setStatus('Fel från Google', msg.error.message || 'Okänt fel', 'error');
+  }
+}
+
+/* ------------------------------------------------------------
+   15-min timers
+   ------------------------------------------------------------ */
+function startSessionTimers(){
+  clearTimers();
+  warnTimer = setTimeout(() => {
+    setStatus('Snart 15-minutersgränsen', 'Lägg på och ring upp igen för en ny session', 'warn');
+  }, SESSION_LIMIT_MS - WARN_BEFORE_MS);
+  sessionTimer = setTimeout(() => {
+    setStatus('15-minutersgränsen nådd', 'Tryck på mikrofonen för att ringa upp igen', 'warn');
+  }, SESSION_LIMIT_MS);
+}
+function clearTimers(){
+  if(warnTimer) clearTimeout(warnTimer);
+  if(sessionTimer) clearTimeout(sessionTimer);
+  warnTimer = sessionTimer = null;
+}
+
+/* ------------------------------------------------------------
+   Call lifecycle
+   ------------------------------------------------------------ */
+async function startCall(){
+  const key = getKey();
+  if(!key){
+    setStatus('Ingen API-nyckel', 'Öppna kugghjulet och klistra in din nyckel', 'error');
+    openSettings();
+    return;
+  }
+  setupDone = false;
+  setCallState('connecting');
+  setStatus('Kopplar…', 'Ger sidan tillgång till mikrofonen');
+
+  try{
+    outCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: OUTPUT_RATE });
+    if(outCtx.state === 'suspended') await outCtx.resume();
+    await startMic();
+  }catch(e){
+    console.error(e);
+    setStatus('Mikrofonen nekades', 'Tillåt mikrofon i webbläsaren och försök igen', 'error');
+    cleanup();
+    return;
+  }
+
+  try{
+    ws = new WebSocket(wsUrl(key));
+    ws.binaryType = 'blob';
+    ws.onopen = () => { sendSetup(); };
+    ws.onmessage = (ev) => handleServerMessage(ev.data);
+    ws.onerror = () => {
+      setStatus('Anslutningsfel', 'Kontrollera nyckeln och nätverket', 'error');
+    };
+    ws.onclose = (ev) => {
+      if(callState !== 'idle'){
+        const why = ev.code === 1008 || ev.code === 1011
+          ? 'Nyckeln nekades eller modellen finns inte'
+          : 'Samtalet avslutades';
+        setStatus('Frånkopplad', why, ev.code >= 4000 || ev.code === 1008 ? 'error' : null);
+      }
+      cleanup(true);
+    };
+  }catch(e){
+    console.error(e);
+    setStatus('Kunde inte ansluta', String(e.message || e), 'error');
+    cleanup();
+  }
+}
+
+function endCall(){
+  setStatus('Samtal avslutat', 'Tryck för att ringa igen');
+  if(ws){ try{ ws.close(1000, 'user hung up'); }catch(e){} }
+  cleanup();
+}
+
+function cleanup(keepStatus){
+  clearTimers();
+  stopPlayback();
+  setupDone = false;
+  if(workletNode){ try{ workletNode.disconnect(); }catch(e){} workletNode = null; }
+  if(sourceNode){ try{ sourceNode.disconnect(); }catch(e){} sourceNode = null; }
+  if(micStream){ micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  if(inCtx){ try{ inCtx.close(); }catch(e){} inCtx = null; }
+  if(outCtx){ try{ outCtx.close(); }catch(e){} outCtx = null; }
+  ws = null;
+  els.level.style.setProperty('--lvl', 0);
+  setCallState('idle');
+}
+
+/* ------------------------------------------------------------
+   Events
+   ------------------------------------------------------------ */
+els.mic.addEventListener('click', () => {
+  if(callState === 'idle') startCall();
+  else endCall();
+});
+
+els.gear.addEventListener('click', openSettings);
+els.overlay.addEventListener('click', (e) => { if(e.target === els.overlay) closeSettings(); });
+els.eye.addEventListener('click', () => {
+  const show = els.keyInput.type === 'password';
+  els.keyInput.type = show ? 'text' : 'password';
+  els.eye.textContent = show ? 'Dölj' : 'Visa';
+});
+els.save.addEventListener('click', () => {
+  const v = els.keyInput.value.trim();
+  if(!v){ els.savedMsg.textContent = 'Fältet är tomt.'; els.savedMsg.style.color = 'var(--danger)'; return; }
+  localStorage.setItem(KEY_STORE, v);
+  els.savedMsg.style.color = 'var(--ok)';
+  els.savedMsg.textContent = 'Sparat i den här webbläsaren.';
+  setStatus('Klar att ringa', 'Tryck på mikrofonen');
+  setTimeout(closeSettings, 700);
+});
+els.clear.addEventListener('click', () => {
+  localStorage.removeItem(KEY_STORE);
+  els.keyInput.value = '';
+  els.savedMsg.style.color = 'var(--muted)';
+  els.savedMsg.textContent = 'Nyckeln rensad.';
+});
+document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeSettings(); });
+window.addEventListener('beforeunload', () => { if(callState !== 'idle') cleanup(); });
+
+/* ------------------------------------------------------------
+   Init
+   ------------------------------------------------------------ */
+(function init(){
+  if(!getKey()){
+    setStatus('Lägg in din nyckel', 'Öppna kugghjulet uppe till höger');
+    els.hint.innerHTML = 'Första gången: klistra in en Gemini-nyckel via kugghjulet. Den stannar i den här webbläsaren.';
+  }else{
+    setStatus('Tryck för att ringa', 'Prata som med vilken gäst som helst');
+  }
+  setCallState('idle');
+})();
+</script>
+</body>
+</html>

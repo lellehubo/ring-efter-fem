@@ -14,3 +14,7 @@ Thumbs.db
 # Råmaterial / transkript (hör inte hemma i appens repo)
 *.vtt
 *.srt
+
+# Testartefakter
+.playwright-mcp/
+*.png

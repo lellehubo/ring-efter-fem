@@ -219,6 +219,11 @@
   .andra button:hover,.andra button:focus-visible{opacity:1;color:var(--ink)}
   @media (prefers-reduced-motion: reduce){ .lur .luren,.lur .sladd{transition:none} }
 
+  .nyckel-lapp{position:fixed;top:max(27px,calc(env(safe-area-inset-top) + 11px));right:70px;z-index:6;appearance:none;cursor:pointer;
+    font:600 11px/1 system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);
+    background:rgba(0,0,0,.3);border:1px solid var(--glass-line);border-radius:999px;padding:8px 10px}
+  .nyckel-lapp[hidden]{display:none}
+
   /* ---------- Inställningar ---------- */
   .overlay{
     position:fixed;inset:0;z-index:10;display:none;
@@ -264,6 +269,9 @@
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.31.22.65.22 1s-.08.69-.22 1z"/>
     </svg>
   </button>
+
+  <!-- Diskret påminnelse vid kugghjulet när nyckel saknas -->
+  <button class="nyckel-lapp" id="nyckelLapp" type="button" hidden>OBS: nyckel</button>
 
   <!-- Små knappar till de andra samtalen (syns bara på AI-snack) -->
   <div class="andra" aria-label="Andra samtal">
@@ -1021,13 +1029,15 @@ function closeSettings(){ els.overlay.classList.remove('open'); }
    Routing / vy-växling
    ------------------------------------------------------------ */
 function applyIdleStatus(){
-  if(!getKey()){
-    setStatus('Lägg in din nyckel', 'Öppna kugghjulet uppe till höger');
-    els.hint.textContent = 'Första gången: klistra in en Gemini-nyckel via kugghjulet. Den stannar i den här webbläsaren.';
-  }else{
-    setStatus(section().idleLine, section().idleSub);
-    els.hint.textContent = '';
-  }
+  // Saknas nyckel visas bara en diskret lapp vid kugghjulet
+  setStatus(section().idleLine, section().idleSub);
+  els.hint.textContent = '';
+  visaNyckelLapp();
+}
+
+function visaNyckelLapp(){
+  const lapp = document.getElementById('nyckelLapp');
+  if(lapp) lapp.hidden = !!getKey();
 }
 
 function openSection(id){
@@ -1418,6 +1428,7 @@ els.mic.addEventListener('click', () => {
 });
 
 els.gear.addEventListener('click', openSettings);
+document.getElementById('nyckelLapp').addEventListener('click', openSettings);
 els.overlay.addEventListener('click', (e) => { if(e.target === els.overlay) closeSettings(); });
 els.eye.addEventListener('click', () => {
   const show = els.keyInput.type === 'password';
@@ -1428,6 +1439,7 @@ els.save.addEventListener('click', () => {
   const v = els.keyInput.value.trim();
   if(!v){ els.savedMsg.textContent = 'Fältet är tomt.'; els.savedMsg.style.color = 'var(--danger)'; return; }
   localStorage.setItem(KEY_STORE, v);
+  visaNyckelLapp();
   els.savedMsg.style.color = 'var(--ok)';
   els.savedMsg.textContent = 'Sparat i den här webbläsaren.';
   if(!els.viewCall.hidden) applyIdleStatus();
@@ -1435,6 +1447,7 @@ els.save.addEventListener('click', () => {
 });
 els.clear.addEventListener('click', () => {
   localStorage.removeItem(KEY_STORE);
+  visaNyckelLapp();
   els.keyInput.value = '';
   els.savedMsg.style.color = 'var(--muted)';
   els.savedMsg.textContent = 'Nyckeln rensad.';

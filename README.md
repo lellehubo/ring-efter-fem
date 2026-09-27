@@ -1,4 +1,9 @@
-# Efter fem – ring upp
+# AI-snack
+
+Röstsamtal med en AI, byggt till föredraget *Drömverktyg*. Startsidan är **AI-snack**: en VU-mätare
+vars nål följer rösterna, en 1980-talslur och en Ring upp-knapp. Samma app har också två äldre
+samtal, *Efter fem* och *AI × von Essen*, som nås via små knappar uppe till vänster.
+Direktlänkar: `#drom` (AI-snack), `#efterfem`, `#ai`.
 
 En enda fil, `index.html`. Ingen build, inget backend. Fungerar som ett telefonsamtal:
 tryck på mikrofonen, prata, lägg på. Rösten är TV4:s *Efter fem*, driven av Gemini Live API

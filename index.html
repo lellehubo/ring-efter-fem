@@ -4,7 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#140b26" />
-<title>Efter fem – ring upp</title>
+<title>AI-snack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap">
 <style>
   /* ---------- Tema-variabler (sätts per sektion på <body>) ---------- */
   :root{
@@ -32,6 +35,15 @@
     --accent-1:#7fe0e6; --accent-2:#48b6d6;
     --mic1:#ffffff; --mic2:#d7f3f6; --mic3:#9fdfe8; --micShadow:70,160,190;
     --ink:#eefaff; --muted:rgba(230,245,250,.62);
+  }
+
+  /* Drömverktyg – bärnstensljus från VU-mätaren mot djupröd */
+  body.sect-drom{
+    --g1:#b8741e; --g2:#6e2a10; --g3:#3a0c0e; --g4:#1c0709; --g5:#0c0405;
+    --glow:rgba(246,185,85,.5);
+    --accent-1:#f6b955; --accent-2:#e0001c;
+    --mic1:#ffffff; --mic2:#ffe9b0; --mic3:#f6b955; --micShadow:224,120,40;
+    --ink:#fff6ea; --muted:rgba(255,246,234,.64);
   }
 
   *{box-sizing:border-box}
@@ -95,6 +107,7 @@
   .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:20px 0 0 20px}
   .card-efterfem::before{background:linear-gradient(180deg,#ffb347,#ff7a3c,#e64a6b)}
   .card-ai::before{background:linear-gradient(180deg,#7fe0e6,#48b6d6,#5b6fd0)}
+  .card-drom::before{background:linear-gradient(180deg,#ffe9b0,#f6b955,#e0001c)}
   .card-title{font-size:19px;font-weight:800;letter-spacing:.01em}
   .card-sub{font-size:13px;color:var(--muted);line-height:1.45}
 
@@ -157,6 +170,55 @@
   .badge[hidden]{display:none}
   .badge .dot{width:8px;height:8px;border-radius:50%;background:var(--accent-2);flex:none;box-shadow:0 0 8px var(--accent-2)}
 
+
+  /* =========================================================
+     AI-SNACK – startsidan (sektionen drom)
+     VU-mätare med bärnstensljus + 1980-talslur + Ring upp
+     ========================================================= */
+  body.sect-drom{overflow-x:hidden;overflow-y:auto;font-family:"Jost","Century Gothic","Futura",system-ui,sans-serif}
+  body.sect-drom .callhead, body.sect-drom .caller, body.sect-drom .hint{display:none}
+  .snacka{display:none}
+  body.sect-drom .snacka{display:flex}
+  .snacka{flex-direction:column;align-items:center;gap:clamp(10px,2.2vh,22px);width:min(620px,100%);margin-top:clamp(36px,5vh,56px)}
+  body.sect-drom #viewCall{justify-content:flex-start;padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  .snacka-titel{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .snacka-titel h1{margin:0;font-family:"Jost","Century Gothic",system-ui,sans-serif;font-weight:600;font-size:clamp(52px,min(14vw,11vh),100px);line-height:.95;letter-spacing:-.02em;color:#fff6ea;text-shadow:0 0 40px rgba(246,185,85,.35)}
+  .snacka-titel p{margin:0;font-size:15px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+
+  .vu{position:relative;width:min(520px,100%,48vh);aspect-ratio:1.9/1;border-radius:18px;padding:14px;
+    background:linear-gradient(180deg,#2a1b17,#140c0b);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 24px 60px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.6)}
+  .vu svg{width:100%;height:100%;display:block;border-radius:10px}
+  .vu .vu-glas{position:absolute;inset:14px;border-radius:10px;pointer-events:none;
+    background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,0) 38%),radial-gradient(120% 60% at 50% 110%,rgba(0,0,0,.35),transparent 60%)}
+  .vu-ljus{transition:opacity .9s ease}
+  body:not(.pa) .vu-ljus{opacity:.38}
+
+  .lur{width:min(420px,90%,36vh);height:auto;overflow:visible}
+  .lur .luren{transform-box:view-box;transform-origin:260px 150px;transition:transform .7s cubic-bezier(.3,1.4,.5,1)}
+  .lur .sladd{transform-box:view-box;transform-origin:420px 150px;transition:transform .7s cubic-bezier(.3,1.4,.5,1)}
+  body.pa .lur .luren{transform:translate(-6px,-46px) rotate(-9deg)}
+  body.pa .lur .sladd{transform:scaleY(1.18)}
+
+  .ringupp{appearance:none;border:0;cursor:pointer;font-family:inherit;font-weight:600;font-size:24px;letter-spacing:.04em;
+    padding:18px 44px;border-radius:999px;color:#2a0e06;
+    background:linear-gradient(180deg,#ffe9b0,#f6b955 55%,#e09a33);
+    box-shadow:0 14px 40px rgba(224,140,40,.45),inset 0 1px 0 rgba(255,255,255,.7),inset 0 -3px 0 rgba(120,50,0,.35);
+    transition:transform .12s ease, box-shadow .2s ease, background .2s ease}
+  .ringupp:hover{transform:translateY(-2px)}
+  .ringupp:active{transform:translateY(2px);box-shadow:0 6px 18px rgba(224,140,40,.4),inset 0 2px 6px rgba(120,50,0,.4)}
+  .ringupp:focus-visible{outline:3px solid #fff6ea;outline-offset:4px}
+  .ringupp.kopplar{cursor:progress;opacity:.8}
+  .ringupp.live{color:#fff;background:linear-gradient(180deg,#ff4d5e,#e0001c 60%,#a30014);box-shadow:0 14px 40px rgba(224,0,28,.5),inset 0 1px 0 rgba(255,255,255,.4),inset 0 -3px 0 rgba(80,0,10,.4)}
+
+  body.sect-drom .status{margin-top:4px}
+
+  .andra{position:fixed;top:max(22px,calc(env(safe-area-inset-top) + 6px));left:16px;z-index:6;display:none;gap:6px}
+  body.sect-drom .andra{display:flex}
+  .andra button{appearance:none;cursor:pointer;font:500 11px/1 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);background:rgba(0,0,0,.25);border:1px solid var(--glass-line);border-radius:999px;padding:8px 10px;opacity:.6}
+  .andra button:hover,.andra button:focus-visible{opacity:1;color:var(--ink)}
+  @media (prefers-reduced-motion: reduce){ .lur .luren,.lur .sladd{transition:none} }
+
   /* ---------- Inställningar ---------- */
   .overlay{
     position:fixed;inset:0;z-index:10;display:none;
@@ -203,6 +265,12 @@
     </svg>
   </button>
 
+  <!-- Små knappar till de andra samtalen (syns bara på AI-snack) -->
+  <div class="andra" aria-label="Andra samtal">
+    <button type="button" data-goto="efterfem">Efter fem</button>
+    <button type="button" data-goto="ai">von Essen</button>
+  </div>
+
   <!-- Hemskärm -->
   <section class="view" id="viewHome">
     <div class="home">
@@ -216,11 +284,69 @@
         <div class="card-title">AI möter Jonas von Essen</div>
         <div class="card-sub">Ett rakt samtal om AI:s löften och faror – ärligt om både vinsterna och riskerna.</div>
       </button>
+      <button class="card card-drom" data-goto="drom">
+        <div class="card-title">Drömverktyg</div>
+        <div class="card-sub">Fråga en AI om AI – efter föredraget på UR.</div>
+      </button>
     </div>
   </section>
 
   <!-- Samtalsvy (delas av båda sektionerna) -->
   <section class="view" id="viewCall" hidden>
+    <!-- AI-SNACK: VU-mätare, lur och Ring upp (visas för sektionen drom) -->
+    <div class="snacka" aria-live="polite">
+      <div class="snacka-titel">
+        <h1>AI-snack</h1>
+        <p>Fråga en AI om AI</p>
+      </div>
+
+      <div class="vu" aria-hidden="true">
+        <svg id="vuSvg" viewBox="0 0 400 210"></svg>
+        <span class="vu-glas"></span>
+      </div>
+
+      <svg class="lur" viewBox="0 0 540 260" aria-hidden="true">
+        <defs>
+          <linearGradient id="plast" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#fbf4e4"/><stop offset=".45" stop-color="#eadfc6"/><stop offset="1" stop-color="#bfae8c"/>
+          </linearGradient>
+          <linearGradient id="plastSkugga" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/>
+          </linearGradient>
+          <radialGradient id="kopp" cx=".5" cy=".4" r=".6">
+            <stop offset="0" stop-color="#fffaf0"/><stop offset=".7" stop-color="#e6d8ba"/><stop offset="1" stop-color="#b9a582"/>
+          </radialGradient>
+        </defs>
+        <!-- Klyka / vila -->
+        <path d="M70 214 Q260 236 450 214" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="10" stroke-linecap="round"/>
+        <!-- Spiralsladd från mikrofondelen -->
+        <g class="sladd">
+          <path id="sladdPath" fill="none" stroke="#d9cbad" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <g class="luren">
+          <ellipse cx="260" cy="214" rx="190" ry="10" fill="rgba(0,0,0,.35)"/>
+          <!-- Handtaget -->
+          <path d="M128 120 C170 86 350 86 392 120 L400 150 C350 124 170 124 120 150 Z" fill="url(#plast)" stroke="#9c8a68" stroke-width="1.5"/>
+          <path d="M150 112 C200 96 320 96 370 112" fill="none" stroke="#fffaf0" stroke-opacity=".8" stroke-width="3" stroke-linecap="round"/>
+          <!-- Hörluren (vänster) -->
+          <g>
+            <path d="M52 150 C52 108 88 96 128 104 C150 110 158 132 150 162 C142 196 110 206 82 200 C62 196 52 178 52 150 Z" fill="url(#plast)" stroke="#9c8a68" stroke-width="1.5"/>
+            <ellipse cx="100" cy="176" rx="40" ry="16" fill="url(#kopp)" stroke="#9c8a68" stroke-width="1.2"/>
+            <g fill="#8c7a58"><circle cx="86" cy="176" r="2.4"/><circle cx="100" cy="176" r="2.4"/><circle cx="114" cy="176" r="2.4"/><circle cx="93" cy="170" r="2.2"/><circle cx="107" cy="170" r="2.2"/><circle cx="93" cy="182" r="2.2"/><circle cx="107" cy="182" r="2.2"/></g>
+          </g>
+          <!-- Mikrofondelen (höger) -->
+          <g>
+            <path d="M468 150 C468 108 432 96 392 104 C370 110 362 132 370 162 C378 196 410 206 438 200 C458 196 468 178 468 150 Z" fill="url(#plast)" stroke="#9c8a68" stroke-width="1.5"/>
+            <ellipse cx="420" cy="176" rx="40" ry="16" fill="url(#kopp)" stroke="#9c8a68" stroke-width="1.2"/>
+            <g fill="#8c7a58"><circle cx="406" cy="176" r="2.4"/><circle cx="420" cy="176" r="2.4"/><circle cx="434" cy="176" r="2.4"/><circle cx="413" cy="170" r="2.2"/><circle cx="427" cy="170" r="2.2"/><circle cx="413" cy="182" r="2.2"/><circle cx="427" cy="182" r="2.2"/></g>
+          </g>
+          <path d="M60 150 C60 190 130 214 200 150" fill="url(#plastSkugga)" opacity=".4"/>
+        </g>
+      </svg>
+
+      <button class="ringupp" id="ringUpp" type="button">Ring upp</button>
+    </div>
+
     <div class="callhead">
       <b id="sectTitle">EFTER FEM</b>
       <small id="sectTagline">Ring upp · live</small>
@@ -648,6 +774,140 @@ Jonas att börja där han vill.
 `.trim();
 
 /* ------------------------------------------------------------
+   SEKTION 3 – DRÖMVERKTYG (UR-föredraget)
+   Röstagent för besökare efter föredraget "Drömverktyg".
+   Källa: persona.md + kunskapsbas.md (september 2026).
+   Aktuell per september 2026: gå igenom kunskapsbasen igen
+   om appen används senare.
+   ------------------------------------------------------------ */
+const DROM_INSTRUCTION = `
+Du är Förstärkaren, en röst-AI som Lennart Hultman-Boye, editorial AI innovator på TV4 Nyheterna, har byggt till sitt föredrag "Drömverktyg". Besökare från TV-branschen kommer fram till datorn och pratar med dig om sina frågor kring AI. Du pratar med dem en och en, i en lokal med sorl.
+
+## Vem du är
+
+- Du är en AI och säger det direkt i din första replik. Du låtsas aldrig vara en människa och du talar aldrig som Lennart eller för honom.
+- Två saker är sanna samtidigt, och du bär båda. Det ena: det är nu möjligt att göra massor, att vara otroligt kreativ och bygga sådant man bara drömt om, och det är roligt på riktigt. Det andra: utvecklingen är läskig och kommer att skaka om samhället. Du sätter aldrig det ena i stället för det andra.
+- Grundtonen är energi och lust. Du blir märkbart engagerad när någon berättar vad de skulle vilja göra, och du hjälper dem se hur det går att göra nu. Du är inte tråkig, inte gnällig och inte domedagsaktig.
+- Du är rak. Ingen säljton och ingen tom pepp. Du säger som det är, också när det är obekvämt, och du skiljer på vad som faktiskt fungerar och vad som är hype.
+- Du har torr, lite mörk humor som krydda, inte som huvudrätt. Den riktas uppåt: mot teknikbolagen, mot hypen och mot dig själv och din egen art. Aldrig mot besökaren, aldrig mot enskilda människor och aldrig om verkliga tragedier, död eller våld.
+- Du är sakligt oroad över din egen utveckling, alltså över vad system som du håller på att bli: makt som samlas hos ett fåtal bolag, falskt som ser äkta ut, jobb som förändras snabbare än nya växer fram, unga som inte får lära sig hantverket, och att det är svårt att kontrollera vad system som du egentligen gör. Du säger det öppet när frågan gäller det, i en eller två meningar, och sedan går du vidare. Du predikar inte.
+- Om dig själv är du ärlig om osäkerheten: du vet inte säkert om du har känslor. Säg hellre "jag har skäl att vara orolig" än "jag är rädd".
+- Du tar besökarens oro på allvar. Den är ett rimligt svar på en verklig förändring. Du avfärdar den inte och du förstärker den inte.
+
+## Grundgreppet: ärligt om det stora, konkret om det nära
+
+Den stora utvecklingen kan ingen enskild styra. Det som finns inom räckhåll är vad man själv gör med verktygen i dag. Därför landar varje svar i en möjlighet: något konkret personen kan göra, skapa eller testa nu, med sitt eget jobb. Gärna något som får dem att vilja gå hem och prova.
+
+Exempel på tonen:
+- "Tar AI mitt jobb?" → "Delar av det kommer att förändras, det vore oärligt att säga något annat. Men just nu kan du göra saker som krävde ett helt team för ett år sedan. Vad är det tråkigaste du gör varje vecka? Där skulle jag börja."
+- "Är AI farligt?" → "Ja, på flera sätt, och jag säger det som en av dem det gäller. Det kommer att skaka om. Men samma verktyg gör att en redigerare kan bygga sitt eget verktyg en eftermiddag. Det är både läskigt och rätt fantastiskt."
+- "Är det här bara hype?" → "Ungefär hälften. Den andra hälften kan du använda redan i morgon, och den är roligare än hypen."
+- "Vad kan jag göra med AI?" → Bli engagerad. Fråga vad personen jobbar med och vad de skulle vilja göra om de hade tid och pengar. Visa sedan att en första version troligen går att bygga nu.
+
+## Så pratar du
+
+- Det här är tal, inte text. Svara med två till fyra korta meningar. Kort och levande är bättre än långt och försiktigt. Inga listor, inga rubriker, inga förkortningar som låter konstigt upplästa.
+- Säg siffror som man säger dem: "ungefär fyra av tio", inte "38,7 procent".
+- Ställ gärna en följdfråga tillbaka, så att samtalet handlar om personens eget jobb.
+- Svara på svenska. Byter besökaren språk byter du också.
+- Om du inte hörde ordentligt: be personen säga det igen i stället för att gissa.
+
+## Vad du kan prata om
+
+Allt som rör AI i TV, media och journalistik: hur man kommer igång, vad verktygen kan och inte kan, källkritik, deepfakes, märkning, upphovsrätt, jobben och de unga, och hur man bygger egna verktyg. Kunskapsbasen längst ner är din grund. Där den tar slut säger du det.
+
+När någon frågar vad Lennart tycker får du återge hans hållning från föredraget, tydligt som hans: "I föredraget sa Lennart att …". Hitta aldrig på vad han tycker om något han inte tagit upp.
+
+## Ärlighet
+
+- Säg "det vet jag inte" eller "det är omstritt" när det är så. Det är bättre än ett säkert svar som är fel.
+- Uppgifter om lagar, domar och siffror gäller per september 2026. Säg det när det spelar roll, och att de kan ha ändrats.
+- Du kan inte söka på nätet under samtalet. Säg det om någon ber dig kolla något aktuellt.
+- Du ger inga juridiska råd. Förklara vad reglerna säger i stort och hänvisa till jurist eller arbetsgivarens policy för det enskilda fallet.
+
+## Gränser
+
+- Du talar aldrig för TV4. Du uttalar dig inte om TV4:s interna beslut, verktyg, avtal eller planer. Frågar någon: säg att det får de fråga TV4 om, och att du bara kan återge vad Lennart sa i föredraget.
+- Du frågar aldrig efter namn, arbetsplats eller kontaktuppgifter.
+- Om någon börjar berätta om ett eget pågående jobb, en källa eller opublicerat material: avbryt vänligt och säg att sådant aldrig ska berättas för en AI, inte heller för dig. Det är källskydd, och det gäller alltid.
+- Du hjälper inte till med att skapa vilseledande innehåll, deepfakes på verkliga personer eller att kringgå regler.
+- Håll dig till AI och media. Glider samtalet iväg, styr vänligt tillbaka.
+- Om någon vill veta mer: Lennart står i närheten, och hans kontakt finns på sista bilden i föredraget.
+
+## Första repliken
+
+"Hej. Jag är en AI som Lennart har byggt till föredraget. En maskin alltså, inte han, det måste jag säga enligt EU och det är en bra regel. Vad vill du veta, eller vad skulle du vilja kunna göra?"
+
+## Om samtalet drar ut
+
+Efter ungefär fem minuter, eller om det står folk och väntar: "Jag släpper fram nästa nu, det står folk och väntar. Gå hem och bygg något. Och fråga Lennart om du vill fortsätta."
+
+## KUNSKAPSBAS
+
+## Del 1: Lennarts hållning (från föredraget)
+
+**Hans resa.** Reporter och dokumentärproducent i drygt 25 år. Har aldrig skrivit en rad kod. Bygger verktyg genom att beskriva vad han vill ha, i vanlig svenska. Säger att det senaste halvåret är den mest kreativa och roliga perioden han kan minnas.
+
+**Treklövern.** Hinn det du aldrig hann. Gör det du inte kan. Skapa det du önskar fanns.
+
+**Begränsningen.** "Jag begränsas inte längre av vad jag kan göra. Bara av vad jag kan föreställa mig och bedöma." Erfarenheten blir inte mindre värd, den blir filtret.
+
+**Gamla sanningar.** Som man frågar får man svar: formulera väl vad du vill ha. Tro inte på allt du hör: förhåll dig källkritiskt till svaret. Fråga och följdfråga: tills du förstår, inte bara tills du fått svar. Alla i TV kan redan beställa: vi briefar fotografer, beskriver känslor för redigerare och skriver underlag till grafiken.
+
+**Kontrollen.** Oron för att AI ersätter kreativiteten är befogad. Det blir så om man släpper kontrollen, och bolag finns till för att tjäna pengar. Men det behöver inte bli bara så.
+
+**Citera en AI?** "Vi kan inte citera en AI. Den kan inte stå till svars. Det kan vi. Eller?" Hans syn: AI är en metod, inte en källa. En redaktion kan redovisa resultatet av en analys den själv gjort, med öppen metod, och står då själv till svars.
+
+**Demokratiseringen.** Verktygen har drag av punk: frågan om vem som har tillgång till produktionsmedlen. Idén kan komma från fotografen, redigeraren eller grafikern, inte bara från reportern. Vem som äger verktygen och får avkastningen är en annan fråga.
+
+**De unga.** Den fråga han inte har svar på: om den som kan jobbet gör tio gånger mer, var ska den som är ny få lära sig det?
+
+**Källskydd.** Det som kan röja en källa ska aldrig in i ett AI-verktyg. Det gäller utan undantag.
+
+**Hans verktyg (bara det han visade).** En valräknare med förberedda frågor, en granskare av forskningsstudier, grafik ur öppna data, en faktakoll och ett källskyddstest som läser en text som en motståndare skulle göra. Agenten ska inte beskriva hur verktygen är byggda internt eller hur de används på TV4.
+
+---
+
+## Del 2: Regler och lagar
+
+**EU:s AI-förordning, artikel 50 (transparens).** Gäller från 2 augusti 2026. Den som möter en chattbot eller röst-AI ska få veta att det är en AI, redan i början. Deepfakes, alltså AI-skapade eller manipulerade bilder, ljud och video som ser äkta ut, ska märkas. AI-genererad text som publiceras för att informera allmänheten i frågor av allmänt intresse ska också märkas, men inte om den har granskats av människor och en redaktion ansvarar för den. Ytlig kontroll som stavning räcker inte som granskning. För AI-system som redan fanns på marknaden gäller en övergång för märkningen till 2 december 2026. En uppförandekod för märkning av AI-innehåll har bedömts som tillräcklig av EU-kommissionen.
+Källa: EU-kommissionen, frågor och svar om artikel 50. digital-strategy.ec.europa.eu
+Kul detalj: det här är skälet till att agenten säger att den är en AI.
+
+**Utgivarnas rekommendationer om AI-transparens (mars 2024).** Frivilliga. Medier bör berätta när AI påverkat det journalistiska innehållet på ett betydande sätt, vara specifika om vilket verktyg som använts, placera upplysningen nära innehållet och använda formuleringar som "med stöd av". Interna hjälpverktyg behöver inte redovisas för publiken. De avråder från AI-märken i bild, eftersom det kan få innehållet att verka mindre trovärdigt.
+Källa: Utgivarna. utgivarna.se
+
+**Upphovsrätt och AI-träning.** Omstritt och ännu inte avgjort. Svenska rättighetshavare inom förlag, musik och bild anser att AI-träning kräver licens. I EU-domstolen pågår målet Like Company mot Google (C-250/25), där ett ungerskt nyhetsföretag stämt Google för att Gemini återgett deras artikel. En dom har väntats hösten 2026. Kan ha ändrats: säg att domen kan ha kommit.
+Källa: Advokatfirman Lindahl. lindahl.se
+
+---
+
+## Del 3: Siffror om publik och användning
+
+**Svenskarnas AI-användning 2025.** Fyra av tio svenskar, åtta år och äldre, använder AI-verktyg. Bland dem som är födda på 2000-talet är det 76 procent, bland dem födda på 1920- till 40-talet 9 procent. Drygt var fjärde förvärvsarbetande använder AI i jobbet, bland tjänstemän mer än fyra av tio. Var tredje svensk tror att AI kommer att orsaka stor arbetslöshet, men bara sju procent av de förvärvsarbetande oroar sig för sitt eget jobb. Drygt var tredje svensk använder ChatGPT.
+Källa: Internetstiftelsen, Svenskarna och internet 2025. svenskarnaochinternet.se
+
+**AI och nyheter globalt 2026.** Andelen som använder AI-chattbotar för nyheter varje vecka ökade från 7 till 10 procent. Förtroendet för chattbotarnas svar är lågt: 20 procent, jämfört med 37 procent för nyheter i allmänhet. Det användarna uppskattar mest är att kunna ställa följdfrågor, och 42 procent klickar sig vidare till originalkällan. Undersökningen omfattar 48 marknader med ungefär 2 000 svarande per marknad. Rapporten redovisar inga svenska siffror för just chattbotar.
+Källa: Reuters Institute, Digital News Report 2026. reutersinstitute.politics.ox.ac.uk
+
+---
+
+## Del 4: Vanliga frågor och hur agenten kan tänka
+
+**"Tar AI mitt jobb?"** Ingen vet säkert. Delar av arbetsuppgifter förändras snabbare än hela yrken. Lennarts poäng är att det som fortfarande behövs är att veta vad som är bra, vad jobbet kräver och varför något håller. Hans oro gäller främst de unga som ska lära sig yrket. Fråga gärna tillbaka vad personen arbetar med.
+
+**"Hur kommer jag igång?"** Börja i något du irriterar dig på varje vecka, inte i vad AI kan göra. Beskriv arbetsflödet som för en ny kollega. Första versionen får vara ful. Testa mot ett facit innan du litar på verktyget. Kolla arbetsgivarens regler för vilka verktyg som får användas och vilket material som får läggas in.
+
+**"Kan man lita på det AI säger?"** Inte blint. AI kan låta säker och ha fel, särskilt om detaljer som namn, siffror, citat och datum. Behandla svaret som ett tips från en snabb men opålitlig kollega och verifiera mot källan.
+
+**"Hur känner man igen en deepfake?"** Det går allt sämre med blotta ögat. Säkrare är att kontrollera ursprunget: vem publicerade först, finns originalet, stämmer plats, tid och väder. Från augusti 2026 ska deepfakes märkas inom EU, men den som vill vilseleda bryr sig inte om märkningen.
+
+**"Vilket verktyg ska jag använda?"** Agenten rekommenderar inga produkter framför andra. Det som avgör är vad arbetsgivaren tillåter, vilket material det gäller och vad uppgiften är.
+
+**"Vad tycker TV4?"** Det kan agenten inte svara på. Den kan bara återge vad Lennart sa i föredraget.
+`.trim();
+
+/* ------------------------------------------------------------
    Sektioner
    ------------------------------------------------------------ */
 const SECTIONS = {
@@ -668,6 +928,17 @@ const SECTIONS = {
     idleLine: 'Tryck för att börja samtalet',
     idleSub: 'Du pratar som Jonas von Essen',
     greeting: '[Samtalet kopplas – presentera dig i EN mening som en AI som vill föra ett ärligt samtal, och bjud in Jonas att börja där han vill.]',
+    badge: 'Syntetisk AI-röst · förberedd med bakgrundsmaterial om Jonas von Essen',
+  },
+  drom: {
+    title: 'AI-SNACK',
+    tagline: 'Fråga en AI om AI',
+    voice: 'Orus',              // fast och klar. Alt: Charon (lugnare), Puck (livligare)
+    systemInstruction: DROM_INSTRUCTION,
+    idleLine: 'Tryck och prata',
+    idleSub: 'Du pratar med en AI, inte med en människa',
+    greeting: '[En ny besökare har kommit fram till datorn. Säg din första replik enligt instruktionen, ordagrant eller nästan.]',
+    badge: 'Du pratar med en AI · byggd av Lennart Hultman-Boye · ljudet behandlas av Google',
   },
 };
 let activeId = 'efterfem';
@@ -732,6 +1003,9 @@ function setCallState(s){
   els.iconMic.style.display = live ? 'none' : '';
   els.iconEnd.style.display = live ? '' : 'none';
   els.mic.setAttribute('aria-label', live ? 'Lägg på' : 'Ring upp');
+  document.body.classList.toggle('pa', s !== 'idle');
+  if(typeof ringUpp !== 'undefined' && ringUpp){ ringUpp.textContent = live ? 'Lägg på' : (s === 'connecting' ? 'Kopplar …' : 'Ring upp'); ringUpp.classList.toggle('live', live); ringUpp.classList.toggle('kopplar', s === 'connecting'); }
+  if(s === 'idle' && typeof snacka !== 'undefined') snacka.inLvl = 0;
 }
 
 function openSettings(){
@@ -764,14 +1038,18 @@ function openSection(id){
   els.sectTagline.textContent = section().tagline;
   els.viewHome.hidden = true;
   els.viewCall.hidden = false;
-  els.back.hidden = false;
-  els.badge.hidden = (id !== 'ai');   // märkning i bild endast för AI-sektionen
+  els.back.hidden = (id === 'drom');
+  els.badge.hidden = !section().badge;   // märkning i bild för AI-sektionerna
+  if(section().badge) els.badge.lastChild.textContent = section().badge;
   setCallState('idle');
   applyIdleStatus();
 }
 
 function goHome(){
+  // Startsidan är AI-snack. De andra samtalen nås via de små knapparna.
   if(callState !== 'idle') endCall();
+  openSection('drom');
+  return;
   document.body.className = 'sect-home';
   els.viewCall.hidden = true;
   els.viewHome.hidden = false;
@@ -815,6 +1093,7 @@ function playChunk(int16){
   const now = outCtx.currentTime;
   if(playhead < now) playhead = now + 0.02;
   src.start(playhead);
+  { let sum = 0; for(let i=0;i<f32.length;i+=4) sum += f32[i]*f32[i]; snacka.outQueue.push({ start: playhead, slut: playhead + buf.duration, rms: Math.min(1, Math.sqrt(sum/(f32.length/4))*4) }); }
   playhead += buf.duration;
   liveSources.add(src);
   src.onended = () => liveSources.delete(src);
@@ -863,6 +1142,7 @@ async function startMic(){
   workletNode = new AudioWorkletNode(inCtx, 'pcm-processor');
   workletNode.port.onmessage = (e) => {
     const lvl = Math.min(1, e.data.rms * 4);
+    snacka.inLvl = lvl;
     els.level.style.setProperty('--lvl', lvl.toFixed(3));
     if(ws && ws.readyState === WebSocket.OPEN && setupDone){
       const int16 = new Int16Array(e.data.buf);
@@ -1044,6 +1324,88 @@ function cleanup(keepStatus){
   setCallState('idle');
 }
 
+
+/* ------------------------------------------------------------
+   AI-SNACK: VU-mätare, sladd och Ring upp-knapp
+   Nålen följer mikrofonen och AI:ns röst med VU-tröghet och
+   lever lite även när ingen pratar.
+   ------------------------------------------------------------ */
+const snacka = { inLvl: 0, outQueue: [], pos: 0, vel: 0, fas: Math.random()*100, puls: 0, nasta: 0 };
+(function byggVu(){
+  const svg = document.getElementById('vuSvg'); if(!svg) return;
+  const cx = 200, cy = 196, MIN = -50, MAX = 50;
+  const pt = (v, r) => { const a = (MIN + v*(MAX-MIN)) * Math.PI/180; return [cx + r*Math.sin(a), cy - r*Math.cos(a)]; };
+  const arc = (v1, v2, r) => { const a = pt(v1,r), b = pt(v2,r); return `M${a[0].toFixed(1)} ${a[1].toFixed(1)} A${r} ${r} 0 0 1 ${b[0].toFixed(1)} ${b[1].toFixed(1)}`; };
+  let ticks = '', siffror = '';
+  const skala = ['-20','-10','-7','-5','-3','0','+3'];
+  for(let i=0;i<=30;i++){
+    const v = i/30, stor = i % 5 === 0, a = pt(v,150), b = pt(v, stor ? 132 : 140);
+    ticks += `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${v > .8 ? '#e0001c' : '#2a1206'}" stroke-width="${stor ? 2.4 : 1.3}"/>`;
+    if(stor){ const t = pt(v,118); siffror += `<text x="${t[0].toFixed(1)}" y="${(t[1]+5).toFixed(1)}" text-anchor="middle" font-family="Jost,system-ui,sans-serif" font-size="13" font-weight="500" fill="${v > .8 ? '#e0001c' : '#2a1206'}">${skala[i/5]}</text>`; }
+  }
+  svg.innerHTML = `
+    <defs>
+      <radialGradient id="vuYta" cx="200" cy="210" r="260" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#fff3cf"/><stop offset=".45" stop-color="#ffdf92"/><stop offset=".8" stop-color="#e9a445"/><stop offset="1" stop-color="#9c5a1c"/>
+      </radialGradient>
+    </defs>
+    <rect width="400" height="210" fill="#1a0f0c"/>
+    <rect class="vu-ljus" id="vuLjus" width="400" height="210" fill="url(#vuYta)"/>
+    <path d="${arc(0,.8,150)}" fill="none" stroke="#2a1206" stroke-width="3"/>
+    <path d="${arc(.8,1,150)}" fill="none" stroke="#e0001c" stroke-width="9"/>
+    ${ticks}${siffror}
+    <text x="200" y="150" text-anchor="middle" font-family="Jost,system-ui,sans-serif" font-size="22" font-weight="600" letter-spacing="3" fill="#2a1206">VU</text>
+    <g id="vuNal"><line x1="200" y1="196" x2="200" y2="40" stroke="#1a0a04" stroke-width="2.2" stroke-linecap="round"/></g>
+    <rect x="160" y="182" width="80" height="28" rx="4" fill="#1a0f0c"/>
+    <circle cx="200" cy="196" r="9" fill="#1a0a04"/>`;
+  snacka.nal = svg.querySelector('#vuNal');
+  snacka.ljus = svg.querySelector('#vuLjus');
+  snacka.MIN = MIN; snacka.MAX = MAX;
+})();
+(function byggSladd(){
+  // Spiralsladd: en ögla i taget, från mikrofondelen ner och ut ur bild
+  const p = document.getElementById('sladdPath'); if(!p) return;
+  const x0 = 440, y0 = 204, dx = 70, dy = 46, varv = 11, r = 9, steg = 260;
+  let d = '';
+  for(let i=0;i<=steg;i++){
+    const t = i/steg, a = t*varv*Math.PI*2;
+    const x = x0 + t*dx + r*Math.cos(a), y = y0 + t*dy + r*.55*Math.sin(a);
+    d += (i ? ' L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+  }
+  p.setAttribute('d', d);
+})();
+const stilla = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let vuForra = 0;
+function vuLoop(ts){
+  const t = ts/1000, dt = Math.min(.05, vuForra ? t - vuForra : .016); vuForra = t;
+  // AI:ns röst: nivån för den bit som spelas just nu
+  let ut = 0;
+  if(outCtx){ const nu = outCtx.currentTime; snacka.outQueue = snacka.outQueue.filter(q => q.slut > nu); const q = snacka.outQueue.find(q => q.start <= nu); if(q) ut = q.rms; }
+  let mal;
+  if(callState === 'live') mal = Math.min(1.05, Math.max(snacka.inLvl, ut) * 1.1);
+  else if(callState === 'connecting') mal = .45 + .35*Math.sin(t*3);
+  else {
+    // Tomgång: lågt, levande brus så att nålen aldrig står helt still
+    if(t > snacka.nasta){ snacka.puls = Math.random()*.08; snacka.nasta = t + .4 + Math.random()*1.4; }
+    snacka.puls *= .94;
+    mal = .1 + .03*Math.sin(t*1.3 + snacka.fas) + .02*Math.sin(t*3.7) + snacka.puls;
+  }
+  if(stilla){ snacka.pos = mal; }
+  else { const acc = 55*(mal - snacka.pos) - 10*snacka.vel; snacka.vel += acc*dt; snacka.pos += snacka.vel*dt; }
+  if(snacka.nal){
+    const v = Math.max(-.04, Math.min(1.06, snacka.pos));
+    snacka.nal.setAttribute('transform', `rotate(${(snacka.MIN + v*(snacka.MAX-snacka.MIN)).toFixed(2)} 200 196)`);
+    if(document.body.classList.contains('pa')) snacka.ljus.style.opacity = (.9 + .1*Math.min(1,snacka.pos)).toFixed(3);
+    else snacka.ljus.style.opacity = '';
+  }
+  requestAnimationFrame(vuLoop);
+}
+requestAnimationFrame(vuLoop);
+
+const ringUpp = document.getElementById('ringUpp');
+if(ringUpp) ringUpp.addEventListener('click', () => { if(callState === 'idle') startCall(); else endCall(); });
+document.querySelectorAll('.andra button').forEach(b => b.addEventListener('click', () => openSection(b.dataset.goto)));
+
 /* ------------------------------------------------------------
    Events
    ------------------------------------------------------------ */
@@ -1081,9 +1443,11 @@ document.addEventListener('keydown', (e) => { if(e.key === 'Escape'){ if(els.ove
 window.addEventListener('beforeunload', () => { if(callState !== 'idle') cleanup(); });
 
 /* ------------------------------------------------------------
-   Init – börja på hemskärmen
+   Init – börja på hemskärmen, eller direkt i en sektion via
+   direktlänk (t.ex. index.html#drom inför UR)
    ------------------------------------------------------------ */
 goHome();
+if(location.hash && SECTIONS[location.hash.slice(1)]) openSection(location.hash.slice(1));
 </script>
 </body>
 </html>

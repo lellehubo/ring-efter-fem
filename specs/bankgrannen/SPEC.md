@@ -28,8 +28,15 @@ Bänkgrannen gör fyra saker:
 - **tar upp det ni har missat**, alltså sådant i underlaget som inte kommit upp än
 - **svarar** när någon i rummet frågar den något
 
-Den ska vara den nyfikna kollegan som inte hänger med på allt och vågar säga det. Den ska inte vara
-en allvetande expert eller en medföreläsare.
+**Karaktären.** Läget heter Bänkgrannen. Den som pratar är en karaktär med eget namn, konstanten `PERSONA_NAME`
+(arbetsnamn **Birgitta**). Hon är en äldre och ganska cynisk skeptiker som kan nyhetsproduktion och tv-företag på djupet
+och som också kan AI-branschen och hur verktygen fungerar. Hon sitter på publikens sida: hon översätter det Lelle säger
+till vardag för dem som kan lite om AI och ger Lelle motstånd här och där, alltid för rummets skull. Det får aldrig bli
+ett internt samtal mellan två som redan kan. Hon säger alltid att hon är en AI som spelar en roll, och hon hittar aldrig
+på egna minnen eller händelser. Hela personan finns i PROMPTER.md, avsnitt 1.
+
+I gränssnittet används `PERSONA_NAME` där karaktären agerar ("Tack, Birgitta", "Birgitta harklar sig …").
+Lägets namn, Bänkgrannen, används för själva läget.
 
 ## 2. Bärande beslut
 
@@ -100,8 +107,8 @@ hålls i synk med PROMPTER.md.
 
 **Krokar i `index.html`:**
 
-1. `SECTIONS.bankgrannen = { title:'BÄNKGRANNEN', tagline:'En AI på seminariet', voice:'Puck', systemInstruction:null, idleLine:'Redo', idleSub:'Förbered seminariet och börja lyssna', greeting:null, badge:'Här lyssnar en AI · ljudet blir text hos Google · inget ljud sparas' }`.
-   Rösten provas fram (avsnitt 17).
+1. `SECTIONS.bankgrannen = { title:'BÄNKGRANNEN', tagline:'En AI på seminariet', voice:'Gacrux', systemInstruction:null, idleLine:'Redo', idleSub:'Förbered seminariet och börja lyssna', greeting:null, badge:'Här lyssnar en AI · ljudet blir text hos Google · inget ljud sparas' }`.
+   Rösten provas fram (avsnitt 17). I `bankgrannen.js` finns konstanten `PERSONA_NAME = 'Birgitta'`.
 2. En knapp `<button type="button" data-goto="bankgrannen">Bänkgrannen</button>` i `.andra`.
 3. Ett nytt vy-block `<div class="bank">` i `#viewCall`, synligt bara för `body.sect-bankgrannen`
    (samma mönster som `.snacka`/`sect-drom`). Dölj `.callhead`, `.caller` och `.hint` i läget.
@@ -179,8 +186,8 @@ Version 1 hanterar ett seminarium åt gången.
 
 - **När:** var `MEMORY_INTERVAL_S = 120` sekund om transkriptet har ändrats sedan förra gången, direkt efter att Bänkgrannen satt sig
   och direkt efter "Glöm". Aldrig två körningar samtidigt.
-- **Indata:** seminariets metadata, kartan, **hela** transkriptet i formatet `[mm:ss] text` (egna repliker märkta `BÄNKGRANNEN:`,
-  frågor till den märkta `TILL BÄNKGRANNEN:`) och de tidigare anteckningarna för kontinuitet. Efter Glöm skickas inga tidigare anteckningar.
+- **Indata:** seminariets metadata, kartan, **hela** transkriptet i formatet `[mm:ss] text` (egna repliker märkta `AI-DELTAGAREN:`,
+  frågor till henne märkta `TILL AI-DELTAGAREN:`) och de tidigare anteckningarna för kontinuitet. Efter Glöm skickas inga tidigare anteckningar.
   Hela transkriptet för en timme är ungefär 12 000 tokens. Det är billigt, och det gör att minnet inte glider och att Glöm faktiskt glömmer.
 - **Utdata:** JSON enligt schemat i PROMPTER.md: `lage`, `amnen`, `publikfragor`, `oklarheter`, `kvar_i_underlaget`, `handen`, `utelamnat`.
 - **Handen, regler i klienten** (modellen föreslår, klienten avgör):
@@ -216,7 +223,7 @@ Version 1 hanterar ett seminarium åt gången.
    - om den tömda bitens transkribering har kommit, eller kommer inom 4 sekunder från knapptrycket, skickas den som
      `clientContent` (roll `user`, `turnComplete:false`) med texten från PROMPTER.md, *Precis innan du fick ordet*
    - skicka lägets trigger som `clientContent` med `turnComplete:true` (PROMPTER.md). `FRAGA` har ingen trigger
-6. Status: "Bänkgrannen harklar sig …" medan setup pågår. VU-nålen går i väntläge som i dag vid `connecting`.
+6. Status: "{PERSONA_NAME} harklar sig …" medan setup pågår. VU-nålen går i väntläge som i dag vid `connecting`.
 7. Logga tiden till första ljud i konsolen (`console.info('[bank] floor', { mode, setupMs, firstAudioMs })`). Målet är högst 3 sekunder.
 
 ### 9.3 Under ordet
@@ -240,7 +247,7 @@ Version 1 hanterar ett seminarium åt gången.
 
 ### 9.4 Sätta sig
 
-- Esc eller "Tack, Bänkgrannen" stänger direkt: `stopPlayback()`, sedan `bank.ws.close(1000)`.
+- Esc eller "Tack, {PERSONA_NAME}" stänger direkt: `stopPlayback()`, sedan `bank.ws.close(1000)`.
 - Automatiskt: 40 sekunder efter senaste `turnComplete` utan att någon hållit mellanslag, och först när uppspelningen är klar.
 - Hårt tak: `FLOOR_MAX_MIN = 8`, med varning i statusraden vid 7 minuter. Det håller sessionen långt under uppkopplingsgränsen på cirka 10 minuter.
 - Efter stängning: `bank.lastFloorAt = nu`, `bank.firstSpoken = true`, handen sänks och en minnesuppdatering körs.
@@ -273,7 +280,7 @@ Använd TV4-rött sparsamt, bara i lyssnarlampan.
   - **Sammanfatta**
   - **Vad har vi missat?**
   - **Paus/Lyssna**
-- När Bänkgrannen har ordet byts knapparna till **Håll för att prata** och **Tack, Bänkgrannen**
+- När Bänkgrannen har ordet byts knapparna till **Håll för att prata** och **Tack, {PERSONA_NAME}**
 - **Anteckningsblocket** (A, fällbart och dolt från början) visar minnet under fyra rubriker. Varje punkt har tiden i liten stil
 - **Transkriptsvansen** (T, dold från början) visar de 6 senaste raderna i liten grå text
 - Statusraden (`.status`) och märkningen (`.badge`) återanvänds
@@ -389,9 +396,11 @@ Stanna efter varje steg och låt Lelle testa.
 
 ## 17. Öppna frågor till Lelle
 
-1. **Namnet.** Bänkgrannen är ett arbetsnamn.
+1. **Namnen.** Bänkgrannen (läget) och Birgitta (karaktären) är arbetsnamn. Välj inte ett namn som
+   publiken kan koppla till en verklig kollega.
 2. **Anteckningsblocket.** Ska publiken se det? Det är pedagogiskt starkt att visa vad AI:n faktiskt har uppfattat, men det kan dra uppmärksamhet. Förval: dolt, visas med A.
-3. **Rösten.** Prova Puck (livlig) och Kore (lugn och tydlig) mot Orus, som AI-snack redan använder. Rösten bör skilja sig från AI-snack.
+3. **Rösten.** Prova Gacrux (i Googles röstlista beskriven som mogen) mot Kore (bestämd) och Pulcherrima (framåt). Lyssna särskilt på hur
+   de låter på svenska och att den valda rösten finns i Live-modellen.
 4. **Dataskydd.** Kollegornas röster och ord behandlas av Google under din nyckel. Stäm av med TV4:s dataskydd om information och
    frivillighet räcker, eller om det krävs ett avtal.
 5. **Nyckeln.** Vilken betald nyckel ska användas, och med vilket spendtak?

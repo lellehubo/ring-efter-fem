@@ -42,11 +42,15 @@ Lägets namn, Bänkgrannen, används för själva läget.
    *Bänken* (hon sitter i en öppen röstsession hela seminariet och får allt som sägs som text) byggs ovanpå. Om Bänken
    fallerar under ett seminarium faller appen automatiskt tillbaka till Per ordet.
 4. **En leverantör, en nyckel.** Allt går via Gemini API med nyckeln som redan ligger i webbläsaren (`localStorage`,
-   samma mönster som i dag). Ingen server behövs.
+   samma mönster som i dag). Ingen egen server behövs. Telefonen använder dessutom Twilio och tre små funktioner som
+   Twilio kör (avsnitt 17).
 5. **Inget ljud sparas.** Ljud strömmas till Google, blir text och sparas aldrig. Text lever bara under seminariet.
 6. **Grundat i det som sagts.** Allt som hon säger att någon har sagt ska finnas i transkriberingen. Underlaget är något
    hon har läst, inte något som har sagts i rummet.
 7. **Källskydd är inbyggt, inte påklistrat.** Det finns en synlig lampa, paus och glöm, filter i minnet och regler i personan (avsnitt 13).
+8. **Hon kan ringa, men bara den som sagt ja i förväg.** Telefonen är ett lager ovanpå resten. Birgitta ringer från datorn
+   i rummet, så att båda parter hörs i högtalarna. Hon kan bara ringa nummer på en lista som ligger hos Twilio, och när hon
+   själv vill ringa frågar hon Lelle först. Inget samtal går iväg utan att Lelle har godkänt det eller kunnat stoppa det (avsnitt 17).
 
 ## 3. Arkitektur
 
@@ -72,6 +76,8 @@ Lägets namn, Bänkgrannen, används för själva läget.
 - **Minnet** läser hela transkriptet och håller anteckningarna: ämnen, publikens frågor, oklarheter och det som inte tagits upp.
 - **Ratten** och klientens spärrar avgör vad som faktiskt händer. Modellerna föreslår, klienten bestämmer.
 - **Rösten** pratar i rummet, antingen via en ny session (A) eller från Bänken (B).
+- **Telefonen** (avsnitt 17) är ett lager ovanpå: en egen röstsession för samtalet, kopplad till en telefonlinje som
+  webbläsaren öppnar via Twilio.
 
 ## 4. Modeller och anrop
 
@@ -80,6 +86,7 @@ Lägets namn, Bänkgrannen, används för själva läget.
 | Öronen | `gemini-3.5-transcribe-live` (`TRANSCRIBE_MODEL`) | WebSocket Live API, text ut |
 | Snabbkollen, minnet, förberedelse av underlag | `gemini-3.6-flash` (`TEXT_MODEL`) | REST `generateContent`, strukturerad JSON |
 | Rösten | `gemini-3.8-live` (befintliga `MODEL_NAME`) | WebSocket Live API, ljud ut |
+| Telefonen | `gemini-3.8-live` för samtalet, Twilio Voice JavaScript SDK och Twilio Functions för linjen | se avsnitt 17 |
 
 - WebSocket-adressen är densamma som i dag (`wsUrl()`).
 - REST-anrop: `POST https://generativelanguage.googleapis.com/v1beta/models/${TEXT_MODEL}:generateContent` med nyckeln i
@@ -100,14 +107,15 @@ Lägets namn, Bänkgrannen, används för själva läget.
 **Filstruktur.** Nästan hela läget ligger i en ny fil, `bankgrannen.js`, som laddas med en vanlig
 `<script src="bankgrannen.js"></script>` efter huvudskriptet. Ingen modul och ingen build. I `index.html` läggs bara
 markup, CSS, en post i `SECTIONS` och några små krokar. Promptarna ligger som konstanter i `bankgrannen.js` och
-hålls i synk med PROMPTER.md. Ljudfilen `harkling.mp3` ligger bredvid (avsnitt 9).
+hålls i synk med PROMPTER.md. Ljudfilen `harkling.mp3` ligger bredvid (avsnitt 9). Telefonen lägger till
+`vendor/twilio.min.js` och mappen `twilio/` med funktionerna som körs hos Twilio (avsnitt 17).
 
 **Nya identifierare skrivs på engelska.** Befintliga svenska namn (`snacka`, `byggVu`, `stilla` …) lämnas som de är.
 
 **Krokar i `index.html`:**
 
 1. `SECTIONS.bankgrannen = { title:'BÄNKGRANNEN', tagline:'En AI på seminariet', voice:'Gacrux', systemInstruction:null, idleLine:'Redo', idleSub:'Förbered seminariet och börja lyssna', greeting:null, badge:'Här lyssnar en AI · ljudet blir text hos Google · inget ljud sparas' }`.
-   Rösten provas fram (avsnitt 18). I `bankgrannen.js` finns konstanten `PERSONA_NAME = 'Birgitta'`.
+   Rösten provas fram (avsnitt 19). I `bankgrannen.js` finns konstanten `PERSONA_NAME = 'Birgitta'`.
 2. En knapp `<button type="button" data-goto="bankgrannen">Bänkgrannen</button>` i `.andra`.
 3. Ett nytt vy-block `<div class="bank">` i `#viewCall`, synligt bara för `body.sect-bankgrannen`
    (samma mönster som `.snacka`/`sect-drom`). Dölj `.callhead`, `.caller` och `.hint` i läget.
@@ -222,8 +230,9 @@ Version 1 hanterar ett seminarium åt gången.
   och ratten inte står på *Tyst*.
 - **Indata:** rattens läge, minuter sedan start och sedan hon senast hade ordet, en kort form av anteckningarna (`lage`,
   `oklarheter`, id:n i `kvar_i_underlaget`), de senaste 3 minuterna av transkriptet och handens nuvarande läge.
-- **Utdata:** JSON enligt QUICK_SCHEMA i PROMPTER.md: `handen` (`uppe`, `typ`, `fraga`, `grund`), `bryt_in` och en kort `motivering`
-  som bara loggas.
+- **Utdata:** JSON enligt QUICK_SCHEMA i PROMPTER.md: `handen` (`uppe`, `typ`, `fraga`, `grund`), `bryt_in`, `samtal`
+  (`onskar`, `kontakt`, `arende`) och en kort `motivering` som bara loggas. `samtal` används bara när telefonen inte är *Av*
+  (avsnitt 17.3). Då får snabbkollen också telefonlistan (id, namn, roll) och vilka som redan ringts.
 - **Mål:** svar inom 2 sekunder.
 
 ### 8.3 Handen
@@ -234,6 +243,8 @@ Modellen föreslår, klienten avgör:
 - aldrig inom `HAND_COOLDOWN_MIN = 4` minuter efter att hon senast hade ordet
 - handen sänks av sig själv efter 4 minuter om den inte fått ordet, eller när snabbkollen sätter `uppe:false`
 - en blockerad hand syns inte, men sparas så att Lelle kan se den i anteckningsblocket
+- när snabbkollen föreslår ett samtal och telefonen står på *Fråga först* tänds handen med typen *samtal* och en
+  telefonikon. Får hon ordet då används triggern `HANDEN_SAMTAL` (avsnitt 17.3)
 
 ## 9. Ratten
 
@@ -273,6 +284,8 @@ få ordet senare. Om någon börjar prata under förvarningen väntar hon på n�
 | `MISSAT` | M | tar upp en eller två punkter ur `kvar_i_underlaget` som rummet borde få höra |
 | `FRAGA` | håll mellanslag när ingen har ordet | tiger tills någon frågat klart och svarar sedan |
 | `AVBRYTER` | Fritt, efter förvarningen | bryter in kort, en eller två meningar |
+| `RINGER` | ett samtal ska ringas (avsnitt 17.3) | säger kort till rummet vem hon ringer, varför, och att de kommer att höra samtalet |
+| `EFTER_SAMTALET` | samtalet är slut (avsnitt 17.4) | berättar för rummet vad personen sa, skilt från hennes egen tolkning |
 
 ### 10.2 Två sätt: Per ordet och Bänken
 
@@ -369,6 +382,7 @@ Använd TV4-rött sparsamt, bara i lyssnarlampan.
   *Det här hänger ni nog inte med på* och *Inte sagt än*. Varje punkt har tiden i liten stil
 - **Transkriptsvansen** (T, dold från början) visar de 6 senaste raderna och den löpande grå texten
 - Statusraden (`.status`) och märkningen (`.badge`) återanvänds
+- Telefonens reglage, samtalskortet och vyn under samtal beskrivs i avsnitt 17.8
 
 **C. Avsluta** via menyn eller vid Lämna:
 
@@ -390,7 +404,9 @@ webbläsarfönster i ett hörn bredvid presentationen.
 - Öronläge: Strömmande (förval) eller Reserv
 - Budget för Fritt (minuter mellan inbrytningar)
 - Minnesintervall
-- **Kostnadsmätare**: tokens och minuter hittills per del (öron, snabbkoll, minne, röst), räknade ur `usageMetadata`
+- Telefonen: tjänstens adress och telefonnyckel (avsnitt 17.5)
+- **Kostnadsmätare**: tokens och minuter hittills per del (öron, snabbkoll, minne, röst, telefon), räknade ur `usageMetadata`
+  och samtalens längd
 
 ## 12. Kortkommandon
 
@@ -398,12 +414,14 @@ Gäller när Bänkgrannen-fönstret har fokus. Mellanslag får inte aktivera kna
 
 | Tangent | Gör |
 |---|---|
-| Enter | Ge ordet (`HANDEN` om handen är uppe, annars `ORDET`) |
+| Enter | Ge ordet (`HANDEN` om handen är uppe, annars `ORDET`). När ett samtalskort visas: ring |
 | S | Sammanfatta |
 | M | Vad har vi missat? |
 | Mellanslag (håll) | Prata till henne. Om ingen har ordet öppnas `FRAGA` |
-| Esc | Under förvarning: inte nu. När hon pratar: tyst. Annars: hon sätter sig. Lämnar aldrig läget |
+| Esc | Under ett samtal: lägg på. Under förvarning eller med ett samtalskort framme: inte nu. När hon pratar: tyst. Annars: hon sätter sig. Lämnar aldrig läget |
 | 1 / 2 / 3 | Ratten: Tyst / Handen / Fritt |
+| Skift + 1 / 2 / 3 | Telefonen: Av / Fråga först / Fritt |
+| R | Öppna Ring: välj kontakt och ärende |
 | P | Paus eller Lyssna |
 | G | Glöm senaste minuten |
 | A | Visa eller dölj anteckningsblocket |
@@ -426,9 +444,10 @@ Gäller när Bänkgrannen-fönstret har fokus. Mellanslag får inte aktivera kna
 7. **Workshops:** öronen ska vara av när deltagarna arbetar med eget material och på bara i helgrupp. Det står i startmanuset.
 8. **Nyckeln:** använd en separat nyckel med fakturering och spendtak. Enligt Gemini API:s villkor får klienter som används av
    personer i EES bara använda betaltjänsten. Med betaltjänsten används indata inte för att förbättra Googles produkter.
-   README och nyckelrutan säger i dag att nyckeln är gratis, och det behöver ändras (steg 9).
+   README och nyckelrutan säger i dag att nyckeln är gratis, och det behöver ändras (steg 10).
 9. **I föredraget** är lampan, ratten och pausen ett konkret källskyddsmoment. Publiken ser vad det innebär att en AI lyssnar,
    hur mycket den får ta för sig och hur man stänger av den.
+10. **Telefonen** har egna regler om samtycke, öppning, inspelning och källskydd (avsnitt 17.9).
 
 ## 14. Kostnad och gränser
 
@@ -441,8 +460,9 @@ Priser enligt Googles prislista 30 september 2026, per seminarietimme. Den fakti
 | Minnet | 30 anrop à cirka 10 000 tokens, plus svar | 0,35 dollar |
 | Rösten, Per ordet | cirka 40 000 tokens text per gång plus 0,018 dollar per minut ljud ut, 8 gånger | 0,4 dollar |
 | Rösten, Bänken | text in hela timmen plus ljud ut. Hur Live räknar sammanhanget per svar mäts i labbet | under 1 dollar (att mäta) |
+| Telefonen | Twilio tar betalt per minut både för webbläsarens linje och för samtalet till en svensk mobil. Se Twilios prislista. Samtalets röstsession hos Google kostar 0,005 dollar per minut in och 0,018 per minut ut | mäts i labbet |
 
-- **Totalt** 2 till 3 dollar per seminarietimme. *Tyst* stänger av snabbkollen och sänker kostnaden.
+- **Totalt** 2 till 3 dollar per seminarietimme utan telefon. *Tyst* stänger av snabbkollen och sänker kostnaden.
 - Priset för `gemini-3.6-flash` fördubblas enligt prislistan den 1 januari 2027.
 
 **Gränser:**
@@ -458,7 +478,7 @@ Stanna efter varje steg och låt Lelle testa.
 
 | Steg | Innehåll | Klart när |
 |---|---|---|
-| 0 | **Labbet.** En egen sida, `labb/bankgrannen-labb.html` (inte länkad från appen), som prövar: **(a)** öronen: svenska, ordlistan, tid till löpande och färdig text, och byte av session i en paus utan förlorade eller dubblerade ord. **(b)** Bänken: en 3.8-session utan automatisk turtagning som under 20 minuter får text via `clientContent` med `turnComplete:false` och förblir tyst, som svarar inom 1 sekund på en trigger, och som efter en återanslutning minns något från 15 minuter tidigare. Mät `usageMetadata` per svar. **(c)** snabbkollens svarstid. | Siffror och en rekommendation för Bänken står i `specs/bankgrannen/LABB.md`, och Lelle har bestämt om Bänken ska byggas |
+| 0 | **Labbet.** En egen sida, `labb/bankgrannen-labb.html` (inte länkad från appen), som prövar: **(a)** öronen: svenska, ordlistan, tid till löpande och färdig text, och byte av session i en paus utan förlorade eller dubblerade ord. **(b)** Bänken: en 3.8-session utan automatisk turtagning som under 20 minuter får text via `clientContent` med `turnComplete:false` och förblir tyst, som svarar inom 1 sekund på en trigger, och som efter en återanslutning minns något från 15 minuter tidigare. Mät `usageMetadata` per svar. **(c)** snabbkollens svarstid. **(d)** telefonen, enligt avsnitt 17.10. | Siffror och en rekommendation för Bänken och för telefonen står i `specs/bankgrannen/LABB.md`, och Lelle har bestämt om Bänken och telefonen ska byggas |
 | 1 | Sektion, tema, knapp i `.andra`, `#bankgrannen`, statiskt gränssnitt (A och B) med ratten, utan logik, miniläge | Läget öppnas från AI-snack och via direktlänk. Layouten håller på laptop och i smalt fönster. Esc lämnar inte läget |
 | 2 | Mikrofonkroken och återanvändbar VU (avsnitt 5 punkt 4 och 5) | **Regressionstest:** AI-snack, Efter fem och von Essen ringer, pratar och lägger på som förut |
 | 3 | Öronen komplett (avsnitt 6), med reservläget och **testläget "Ljudfil som rum"**: en dold inställning där en inspelad ljudfil (mp3 eller wav) avkodas, samplas om till 16 kHz och matas genom samma kedja som mikrofonen | Löpande och färdig text syns med tider. Bytet efter nio minuter går igenom en paus utan förlorade ord. P och G fungerar. En inspelad fil går igenom kedjan |
@@ -466,8 +486,9 @@ Stanna efter varje steg och låt Lelle testa.
 | 5 | Minnet, snabbkollen, handen och rattens logik (avsnitt 8 och 9) med lampor, harkling, förvarning och veto, men utan röst. Anteckningsblocket | Med testfilen: anteckningarna växer, varje punkt har en tid som finns i transkriptet, handen följer spärrarna, *Fritt* ger förvarning i pauser och Esc stoppar den |
 | 6 | Rösten Per ordet, alla sex lägen (avsnitt 10.3, 10.5, 10.6) | Varje läge ger ett relevant svar inom cirka 3 sekunder. Första gången säger hon att hon är en AI. Håll för att prata fungerar utan eko. Repliker hamnar i transkriptet |
 | 7 | Bänken (avsnitt 10.4) bakom inställningen, med automatisk reserv till Per ordet | Svar inom cirka 1 sekund. Hon håller tyst mellan triggarna. Efter en återanslutning minns hon tidigare delar av seminariet. Om nätet dras ur i 30 sekunder växlar appen till Per ordet |
-| 8 | Integritet (avsnitt 13): startrutan, sessionStorage med "Fortsätt?", Avsluta, export | Allt i 13.1 till 13.6 kan visas i praktiken. Efter Radera finns ingenting kvar i `sessionStorage` |
-| 9 | Kostnadsmätaren, inställningarna, README (nytt avsnitt om Bänkgrannen och om betald nyckel). Ändra också "Skaffa en gratis" i nyckelrutan i `index.html` | Mätaren visar kostnad per del. README och nyckelrutan beskriver läget, kortkommandona och nyckelkravet |
+| 8 | Telefonen (avsnitt 17) i tre delsteg. **8a:** Twilio-funktionerna, telefonlistan, inställningarna och telefonreglaget. **8b:** samtal som Lelle startar med R: annonsering i rummet, samtalssession, ljudvägar, Lägg på, samtalet i transkriptet och återrapporten. **8c:** samtal som Birgitta föreslår: handen med samtalsikon, funktionen `begar_samtal`, samtalskortet, samt *Fritt* med förvarning och veto | 8a: ett nummer utanför listan avvisas av Twilio. 8b: ett samtal till Lelles egen mobil hörs i sin helhet i rummet, Esc lägger på direkt och hon berättar efteråt vad hon fick veta. 8c: hon frågar alltid först, och utan Enter går inget samtal iväg |
+| 9 | Integritet (avsnitt 13): startrutan, sessionStorage med "Fortsätt?", Avsluta, export | Allt i 13.1 till 13.6 kan visas i praktiken. Efter Radera finns ingenting kvar i `sessionStorage` |
+| 10 | Kostnadsmätaren, inställningarna, README (nytt avsnitt om Bänkgrannen och om betald nyckel). Ändra också "Skaffa en gratis" i nyckelrutan i `index.html` | Mätaren visar kostnad per del. README och nyckelrutan beskriver läget, kortkommandona och nyckelkravet |
 
 ## 16. Generalrepetition
 
@@ -484,8 +505,185 @@ Stanna efter varje steg och låt Lelle testa.
    publikfrågor som Lelle upprepar ("frågan var …") och tiden till första ljud i båda sätten.
 5. **Reserv:** dra ur nätet en halv minut under repetitionen. Appen ska klara sig. Om nätet eller nyckeln krånglar under ett skarpt
    föredrag kör föredraget vidare utan henne. Inget i föredraget får hänga på henne.
+6. **Telefonen, med den som ska ringas:** ring personen på riktigt i lokalen, med samma ljudanläggning. Kontrollera att båda
+   parter hörs tydligt, att öppningen fungerar, att hon håller sig till ärendet och att återrapporten bara säger det personen
+   faktiskt sa. Prova också att personen säger nej, att ingen svarar och att Lelle lägger på mitt i.
 
-## 17. Inte i version 1
+## 17. Telefonen
+
+Ett lager ovanpå resten. Birgitta kan ringa ett telefonsamtal mitt i seminariet, och rummet hör båda parter i sin helhet.
+Allt i det här avsnittet är avstängt tills telefonen är inställd (17.5).
+
+### 17.1 Varför samtalet rings från webbläsaren
+
+Samtalet rings från datorn i rummet via Twilios telefon för webbläsare (Voice JavaScript SDK). Då sker det i rummet:
+den uppringdes röst kommer ut ur datorns högtalare, och Birgittas röst spelas upp i rummet samtidigt som den går ut på
+linjen. Det blir samma Birgitta som i rummet, med samma röst, persona och kunskap om seminariet.
+
+Alternativet, en röstagent hos ElevenLabs som ringer via Twilio, är förkastat för version 1. Där går samtalet mellan
+ElevenLabs servrar och den uppringdes telefon. ElevenLabs liveövervakning skickar bara text och kräver Enterprise-avtal,
+och om Twilio kan skicka en kopia av ljudet bredvid ElevenLabs egen ljudström är inte dokumenterat.
+
+### 17.2 Arkitektur
+
+```
+ Rummet                                              Twilio                 Den uppringda
+ ┌──────────────────────────────────────────┐
+ │ Rummets röst (Per ordet eller Bänken)    │
+ │   annonserar samtalet, rapporterar efter │
+ │                                          │
+ │ Samtalssessionen: gemini-3.8-live        │
+ │   in:  den uppringdes ljud (ren ström)   │
+ │   ut:  rummets högtalare + linjen ───────┼──► Voice SDK ──► /ring ──► <Dial> ──► mobil
+ │                                          │        ▲
+ │ Den uppringdes röst ◄── SDK spelar upp ──┼────────┘
+ │ Rummets mikrofon: går ut på linjen bara  │
+ │   när Lelle håller mellanslag            │
+ └──────────────────────────────────────────┘
+```
+
+- **Samtalssessionen** är en egen Live-session för samtalet, med automatisk turtagning. Den hör bara den uppringdes ljud,
+  som kommer rent från linjen och inte via rummets mikrofon. Därför uppstår inget eko i rummet.
+- **Rummets röst** (Per ordet eller Bänken) säger före samtalet vem hon ringer och varför, och berättar efteråt vad hon fick veta.
+- **Öronen** pausas under samtalet. Samtalet hamnar i transkriptet via samtalssessionens in- och utskrift.
+
+### 17.3 Tre sätt att starta ett samtal
+
+| Sätt | Gång |
+|---|---|
+| **Lelle startar** | R öppnar Ring. Lelle väljer kontakt och ärende och trycker Enter. Rummets röst får `RINGER`, säger kort vem hon ringer och varför, och samtalet rings upp när hon pratat klart |
+| **Hon föreslår** (telefonen på *Fråga först*) | Snabbkollen föreslår ett samtal, och handen tänds med samtalsikon. När hon får ordet frågar hon högt: "Ska jag ringa Anna och fråga?" Säger Lelle ja anropar hon funktionen `begar_samtal`, och samtalskortet visas. Först när Lelle trycker Enter på kortet får funktionen svaret `godkänt`. Då säger hon kort till rummet vem hon ringer, och samtalet rings upp. Esc eller nej ger svaret `nej`, och hon släpper det |
+| **Fritt** (telefonen på *Fritt*) | Snabbkollen föreslår ett samtal och alla spärrar håller. Handlampan pulserar med samtalsikon, harklingen spelas och en nedräkning på 5 sekunder visas. Esc stoppar. Annars får rummets röst `RINGER` med tillägget att hon ringer på eget initiativ |
+
+Samma kortbekräftelse gäller när Lelle själv ber henne ringa medan hon har ordet, och hon anropar `begar_samtal`.
+Ett muntligt ja räcker aldrig: samtalet rings först efter Enter på kortet eller i Ring-dialogen.
+
+**Spärrar:** telefonen *Av* stänger allt. Ingen kontakt rings två gånger under ett seminarium utom när Lelle startar.
+I *Fritt* gäller dessutom högst `PHONE_FREE_MAX = 1` samtal per seminarium, aldrig de första 10 minuterna och bara i en paus.
+Inget samtal startar medan någon har ordet, under en annan förvarning eller medan mellanslag hålls.
+Snabbkollen körs inte när ratten står på *Tyst*, så då föreslår hon inga samtal. R fungerar alltid när telefonen inte är *Av*.
+
+### 17.4 Samtalets gång
+
+1. **Annonsering.** Rummets röst pratar klart (`turnComplete` och uppspelningen är slut).
+2. **Uppringning.** Appen hämtar en tillfällig nyckel från `/token` och kör `device.connect({ params: { kontakt: '<id>' } })`.
+   Samtidigt öppnas samtalssessionen med `CALL_PERSONA` (PROMPTER.md avsnitt 9), så att den är redo när någon svarar.
+   Lampan visar `RINGER …`, och signalerna hörs i rummet.
+3. **Svar.** Med `answerOnBridge` går webbläsarens samtal från ringning till öppet först när den uppringda svarar. Kontrollera
+   i labbet vilket event och vilken status som säger det och hur ringstatusen slås på i SDK 2.x. När samtalet är öppet:
+   - den uppringdes ström (`call.getRemoteStream()`) kopplas in i samtalssessionen
+   - säger den uppringda något ("Hallå?") svarar hon själv, eftersom samtalssessionen har automatisk turtagning
+   - är det tyst i 3 sekunder skickas triggern `SAMTAL_START` (PROMPTER.md avsnitt 9)
+4. **Under samtalet.** Hon följer ärendet och öppnar alltid enligt 17.9. Lelle kan prata i luren genom att hålla mellanslag:
+   rummets mikrofon blandas då in på linjen och i samtalssessionen.
+5. **Slut.** Samtalet avslutas när
+   - hon anropar funktionen `lagg_pa` (appen väntar tills hennes sista replik har spelats upp)
+   - den uppringda lägger på
+   - Lelle trycker Esc eller **Lägg på**
+   - tidsgränsen nås: `timeLimit` 480 sekunder i `<Dial>` och en varning i statusraden vid 6 minuter
+   - ingen svarar inom 30 sekunder (`timeout`), eller linjen är upptagen eller bryts
+6. **Efteråt.** Samtalssessionen stängs. Öronen startar igen. Samtalet i text läggs i transkriptet med etiketterna
+   `I LUREN (<namn>):` och `AI-DELTAGAREN (i luren):`. Bänken får texten som `[SAMTALET …]`. Rummets röst får triggern
+   `EFTER_SAMTALET` med utfallet: *genomfört*, *inget svar*, *avböjde*, *avbrutet* eller *fel*. Minnet uppdateras.
+
+### 17.5 Twilio-delen
+
+Allt ligger i Lelles befintliga Twilio-konto. Funktionerna finns i repot under `twilio/` och driftsätts med Twilio CLI och
+Serverless Toolkit (`twilio serverless:deploy`). Hemligheter ligger i `twilio/.env`, som aldrig committas (`.env` finns redan i `.gitignore`).
+
+| Funktion | Synlighet | Gör |
+|---|---|---|
+| `functions/token.js` | publik, kräver telefonnyckeln i headern `x-bank-key` | ger webbläsaren en tillfällig nyckel med `VoiceGrant` (bara utgående samtal via TwiML-appen, giltig 1 timme). CORS bara för `https://lellehubo.github.io` |
+| `functions/kontakter.js` | publik, kräver telefonnyckeln | returnerar telefonlistan **utan nummer**: `[{ id, namn, roll, arende }]` |
+| `functions/ring.protected.js` | skyddad (kräver Twilios signatur) | TwiML-appens röstadress. Slår upp `kontakt` i listan och svarar med `<Dial callerId="…" answerOnBridge="true" timeout="30" timeLimit="480"><Number>…</Number></Dial>`. Okänd kontakt ger `<Reject/>` |
+
+**Miljövariabler:** `API_KEY_SID`, `API_KEY_SECRET`, `TWIML_APP_SID`, `CALLER_ID`, `BANK_KEY` (telefonnyckeln) och `CONTACTS`:
+JSON med `[{ id, namn, nummer, roll, arende, samtycke }]`, där nummer anges i formatet +46… och `samtycke` är datumet då personen sa ja.
+**Numren finns bara här.** Webbläsaren, repot och Birgitta ser dem aldrig.
+
+**I Twilio-konsolen:**
+- skapa en API-nyckel och en TwiML-app vars röstadress pekar på `/ring`
+- slå på samtal till Sverige under geografiska behörigheter för röst (Voice Geo Permissions)
+- avsändare: verifiera Lelles mobil och använd den som `CALLER_ID` (rekommenderat, eftersom ett +1-nummer på displayen
+  kanske inte besvaras), eller köp ett svenskt nummer, vilket kräver att uppgifter registreras hos Twilio. Det befintliga
+  amerikanska numret och dess koppling till ElevenLabs påverkas inte
+- spela aldrig in samtal (`record` är avstängt som standard i `<Dial>`)
+
+**I appen:** inställningarna får två fält, *Telefontjänst* (funktionernas basadress) och *Telefonnyckel*. Båda sparas i
+`localStorage` som Gemini-nyckeln. Telefonlistan hämtas från `/kontakter` när seminariet startar.
+
+### 17.6 Ljudvägar i webbläsaren
+
+- **SDK:** Twilio Voice JavaScript SDK 2.x. Twilio har ingen CDN för version 2, så `dist/twilio.min.js` från en låst version
+  (GitHub-release eller npm-paketet `@twilio/voice-sdk`) läggs i `vendor/twilio.min.js` och laddas med en vanlig `<script>`.
+  Versionen måste stödja AudioProcessor.
+- **Device:** `new Twilio.Device(token, { edge: ['dublin', …] })` med europeiska kantnoder (kontrollera namnen i Twilios lista).
+  Ingen `register()`, eftersom inga samtal tas emot.
+- **Ut på linjen:** en lokal `AudioProcessor` (`device.audio.addProcessor(…)`) vars `createProcessedStream` returnerar strömmen från
+  en `MediaStreamAudioDestinationNode`, kallad `bank.lineOut`. Dit går:
+  - samtalssessionens ljud, som samtidigt spelas i rummet (en variant av `playChunk` som kopplar till både högtalarna och `bank.lineOut`)
+  - mikrofonen via en förstärkning som är 0 och blir 1 bara medan Lelle håller mellanslag
+- **In från linjen:** `call.getRemoteStream()` kopplas till en egen `AudioWorkletNode` (`pcm-processor`) i en 16 kHz-kontext och
+  skickas till samtalssessionen som `realtimeInput.audio`. Kontrollera i labbet att det fungerar i Chrome och Edge.
+- **I rummet:** SDK:n spelar upp den uppringdes röst i datorns högtalare. Birgittas röst spelas som vanligt. Datorn ska vara
+  kopplad till lokalens ljudanläggning.
+- **VU-mätaren** följer max av den uppringdes och Birgittas nivå.
+
+### 17.7 Samtalssessionen och funktionerna
+
+- **Samtalssessionen:** `gemini-3.8-live`, samma röst som i rummet, `sv-SE`, automatisk turtagning, in- och utskrift.
+  Systeminstruktionen är `CALL_PERSONA` med kontakt, ärende, bakgrund från rummet och en kort form av anteckningarna.
+  Verktyg: `lagg_pa`.
+- **Rummets röst** får verktyget `begar_samtal(kontakt_id, arende, grund)` när telefonen inte är *Av*, och personans block
+  `{{TELEFON}}` fylls i med telefonlistan (namn, roll och ärende, aldrig nummer).
+- **Funktionssvar:** `begar_samtal` får svaret `{ status: 'godkänt' }` först när Lelle tryckt Enter, annars `{ status: 'nej' }`.
+  Är telefonen *Av* eller kontakten okänd blir svaret `{ status: 'inte möjligt', skäl }`. Gemini 3.8 Live kör funktionsanrop
+  asynkront som standard: kontrollera i labbet hur hon beter sig medan kortet väntar och om svaret ska skickas med
+  `scheduling: 'WHEN_IDLE'`. Flödet ska fungera både om modellen väntar och om den fortsätter prata.
+- **`lagg_pa`:** appen svarar direkt, väntar tills uppspelningen är slut och kör sedan `call.disconnect()`.
+
+### 17.8 Gränssnitt och tangenter
+
+- **Telefonreglaget** sitter bredvid ratten: *Av*, *Fråga först* och *Fritt*. Skift + 1, 2 och 3. Det syns bara när telefonen är
+  inställd. Förval: *Fråga först*.
+- **Ring** (R): en ruta med telefonlistan (namn och roll), ett ärendefält som är förifyllt med kontaktens standardärende
+  och knappen **Ring** (Enter).
+- **Samtalskortet** när hon vill ringa: "{PERSONA_NAME} vill ringa Anna, [roll], om: [ärende]", med knapparna **Ring** (Enter)
+  och **Inte nu** (Esc). Det ska synas tydligt för publiken.
+- **Under samtalet** visar lyssnarlampan `I LUREN` med kontaktens namn och en klocka. Knapparna byts till **Lägg på** (Esc)
+  och **Håll för att prata i luren** (mellanslag). Ringa-tillstånd: `RINGER …`.
+- **Miniläget** visar telefonreglaget och, under samtal, **Lägg på**.
+
+### 17.9 Samtycke, öppning och källskydd
+
+1. **Bara den som sagt ja.** Telefonlistan får bara innehålla personer som i förväg gått med på att bli uppringda av en AI
+   under ett föredrag, vid en tidpunkt de inte vet, att höras i högtalare inför publik, och att samtalet behandlas av Google och
+   Twilio. Samtycket ska helst finnas skriftligt (ett mejl räcker), och datumet står i `samtycke`.
+2. **Öppningen, varje gång.** Hon säger att hon är en AI, att hon ringer från Lelles föredrag på TV4 och att samtalet hörs i
+   högtalare för ett rum med publik. Sedan frågar hon om det är okej. Ett nej eller en tvekan avslutar samtalet direkt.
+3. **Röstbrevlåda:** hon säger ingenting och lägger på.
+4. **Ingen inspelning.** Varken Twilio eller appen spelar in. Samtalet finns bara som text under seminariet och raderas med det.
+   Twilios samtalslogg (nummer, tid och längd) finns kvar i kontot.
+5. **Inga källor på listan.** Panelen säger tydligt: *Lägg aldrig in källor, uppgiftslämnare eller personer i pågående
+   granskningar.* Hon berättar aldrig mer om seminariet än ärendet kräver och nämner aldrig någon i publiken.
+6. **Inget i samtalet är ett citat.** Det personen säger är underlag för demonstrationen, inte material för publicering.
+7. **Om något allvarligt kommer upp** lämnar hon över till Lelle och tystnar. Lelle tar samtalet med mellanslag eller lägger på.
+
+### 17.10 Labbet för telefonen (steg 0 d)
+
+Gör ett samtal till Lelles egen mobil, som står på listan, och mät och kontrollera:
+
+- att `/token` och `/kontakter` fungerar från GitHub Pages-adressen och nekar fel nyckel, och att `/ring` avvisar okända kontakter och osignerade anrop
+- tid från Ring till signal, att signalerna hörs i rummet och vilket event som säger att samtalet är besvarat
+- tid från svar till hennes första ord, och från att den uppringda tystnat till att hon svarar (mål: under 1,5 sekunder)
+- hur väl hon förstår svenska över telefonljud, och om eko från linjen får henne att avbryta sig själv
+- att hon låter tydlig i mobilen och att båda parter hörs bra i rummet
+- att Håll för att prata i luren fungerar utan störande eko
+- alla sätt att avsluta: `lagg_pa`, att den uppringda lägger på, Esc, inget svar och röstbrevlåda
+- hur `begar_samtal` beter sig medan samtalskortet väntar
+- kostnad per minut enligt Twilios logg
+
+## 18. Inte i version 1
 
 - Fritt samtal med automatisk turtagning (kräver headset och passar inte Bänken)
 - Tillfälliga tokens via en liten server i stället för nyckeln i webbläsaren
@@ -494,8 +692,11 @@ Stanna efter varje steg och låt Lelle testa.
 - Telefonen som fjärrkontroll
 - Talaridentifiering (vem som säger vad)
 - Frågor från publiken via QR-kod
+- Inkommande samtal, alltså att någon ringer in till henne
+- Samtal till nummer utanför telefonlistan
+- En telefonagent hos ElevenLabs (17.1)
 
-## 18. Öppna frågor till Lelle
+## 19. Öppna frågor till Lelle
 
 1. **Namnen.** Bänkgrannen (läget) och Birgitta (karaktären) är arbetsnamn. Välj inte ett namn som publiken kan koppla till en verklig kollega.
 2. **Anteckningsblocket.** Ska publiken se det? Det är pedagogiskt starkt att visa vad AI:n faktiskt har uppfattat, men det kan dra
@@ -506,3 +707,7 @@ Stanna efter varje steg och låt Lelle testa.
 5. **Dataskydd.** Kollegornas röster och ord behandlas av Google under din nyckel. Stäm av med TV4:s dataskydd om information och
    frivillighet räcker, eller om det krävs ett avtal.
 6. **Nyckeln.** Vilken betald nyckel ska användas, och med vilket spendtak?
+7. **Vem hon ringer.** Vilka ska stå på telefonlistan, och vilka ärenden passar? En invigd kollega som vet ungefär när det kommer
+   är tryggast för första gången.
+8. **Avsändarnumret.** Din verifierade mobil eller ett svenskt Twilio-nummer?
+9. **Samtal i tjänsten.** Behöver TV4:s juridik eller dataskydd säga något om att en AI ringer externa personer från ett TV4-föredrag?

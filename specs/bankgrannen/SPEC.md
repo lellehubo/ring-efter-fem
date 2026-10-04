@@ -23,11 +23,18 @@ realtid och har läst underlaget i förväg. Den kan räcka upp handen, sammanfa
 när någon frågar den och, om Lelle vrider upp ratten, bryta in själv.
 
 **Karaktären.** Läget heter Bänkgrannen. Den som pratar är en karaktär med eget namn, konstanten `PERSONA_NAME`
-(arbetsnamn **Birgitta**). Hon är en äldre och ganska cynisk skeptiker som kan nyhetsproduktion och tv-företag på djupet
-och som också kan AI-branschen och hur verktygen fungerar. Hon sitter på publikens sida: hon översätter det Lelle säger
-till vardag för dem som kan lite om AI och ger Lelle motstånd här och där, alltid för rummets skull. Det får aldrig bli
-ett internt samtal mellan två som redan kan. Hon säger alltid att hon är en AI som spelar en roll, och hon hittar aldrig
-på egna minnen eller händelser. Hela personan finns i PROMPTER.md, avsnitt 1.
+(arbetsnamn **Birgitta**). Hon säger alltid att hon är en AI som spelar en roll, och hon hittar aldrig på egna minnen
+eller händelser. Vad hon gör beror på vilken **roll** hon har för seminariet (PROMPTER.md avsnitt 10):
+
+- **Skeptikern** (AI-föredrag): en äldre och ganska cynisk skeptiker som kan nyhetsproduktion, tv-företag och AI-branschen.
+  Hon sitter på publikens sida, översätter det Lelle säger för dem som kan lite om AI och ger Lelle motstånd här och där,
+  alltid för rummets skull.
+- **Dramaturgen** (programutveckling): en erfaren dramaturg och tv-producent inom underhållning och reality. Hon är en
+  kunnig sparringpartner i idéarbete och formatutveckling, med Robinson och formatets internationella versioner som
+  kunskapsbas. Hon har en kvalificerad diskussion om produktion, inte pepp.
+
+Rollen styr personan, rösten och vilken kunskapsbas som laddas. Resten av läget är detsamma. Personans gemensamma del
+finns i PROMPTER.md avsnitt 1.
 
 I gränssnittet används `PERSONA_NAME` där karaktären agerar ("Tack, Birgitta", "Birgitta harklar sig …").
 Lägets namn, Bänkgrannen, används för själva läget.
@@ -115,7 +122,8 @@ hålls i synk med PROMPTER.md. Ljudfilen `harkling.mp3` ligger bredvid (avsnitt 
 **Krokar i `index.html`:**
 
 1. `SECTIONS.bankgrannen = { title:'BÄNKGRANNEN', tagline:'En AI på seminariet', voice:'Gacrux', systemInstruction:null, idleLine:'Redo', idleSub:'Förbered seminariet och börja lyssna', greeting:null, badge:'Här lyssnar en AI · ljudet blir text hos Google · inget ljud sparas' }`.
-   Rösten provas fram (avsnitt 19). I `bankgrannen.js` finns konstanten `PERSONA_NAME = 'Birgitta'`.
+   Rösten provas fram (avsnitt 19). I `bankgrannen.js` finns konstanten `PERSONA_NAME = 'Birgitta'` och konstanten `ROLES`
+   med text och röst per roll. Rollens röst går före `SECTIONS.bankgrannen.voice`.
 2. En knapp `<button type="button" data-goto="bankgrannen">Bänkgrannen</button>` i `.andra`.
 3. Ett nytt vy-block `<div class="bank">` i `#viewCall`, synligt bara för `body.sect-bankgrannen`
    (samma mönster som `.snacka`/`sect-drom`). Dölj `.callhead`, `.caller` och `.hint` i läget.
@@ -191,6 +199,9 @@ dubbelklick (`file://`). Om de inte gör det, skriv det i README.
 Panelen **Seminariet** nås via kugghjulet när läget är aktivt. Den har fälten:
 
 - Titel, Målgrupp, Föreläsarens namn (förval "Lelle")
+- **Roll**: Skeptikern (förval) eller Dramaturgen. Rollerna ligger i konstanten `ROLES` i `bankgrannen.js`, med text och röst
+  per roll enligt PROMPTER.md avsnitt 10
+- **Omfång**: *Lyssnar* (den fulla versionen) eller *Bara på tilltal* (den smala versionen, avsnitt 15.1)
 - **Ordlista**: namn och begrepp som ofta hörs fel (Förstärkaren, ENPS, Claude, Superkrafter …). Den blir `customVocabulary` i öronen
 - **Underlag**: filer (`.md`, `.txt`, `.pdf`) och/eller inklistrad text
 - Knappen **Förbered**
@@ -204,7 +215,7 @@ Panelen **Seminariet** nås via kugghjulet när läget är aktivt. Den har fält
 5. En tokenuppskattning visas (tecken / 4). Över 40 000 tokens: gul varning. Över 70 000: Förbered stoppas med förklaringen
    att underlaget måste kortas. Rösten tar högst 131 072 tokens, och i Bänken ska hela seminariets text också få plats.
 
-**Lagring:** IndexedDB, databas `bankgrannen`, post `seminar`: `{ title, audience, speaker, glossary, sourceText, map, updatedAt }`.
+**Lagring:** IndexedDB, databas `bankgrannen`, post `seminar`: `{ title, audience, speaker, role, scope, glossary, sourceText, map, updatedAt }`.
 Underlaget finns kvar när sidan laddas om. Knappen "Rensa underlag" tar bort det.
 Under fältet står: *Lägg aldrig in material som kan röja en källa.*
 
@@ -489,6 +500,24 @@ Stanna efter varje steg och låt Lelle testa.
 | 8 | Telefonen (avsnitt 17) i tre delsteg. **8a:** Twilio-funktionerna, telefonlistan, inställningarna och telefonreglaget. **8b:** samtal som Lelle startar med R: annonsering i rummet, samtalssession, ljudvägar, Lägg på, samtalet i transkriptet och återrapporten. **8c:** samtal som Birgitta föreslår: handen med samtalsikon, funktionen `begar_samtal`, samtalskortet, samt *Fritt* med förvarning och veto | 8a: ett nummer utanför listan avvisas av Twilio. 8b: ett samtal till Lelles egen mobil hörs i sin helhet i rummet, Esc lägger på direkt och hon berättar efteråt vad hon fick veta. 8c: hon frågar alltid först, och utan Enter går inget samtal iväg |
 | 9 | Integritet (avsnitt 13): startrutan, sessionStorage med "Fortsätt?", Avsluta, export | Allt i 13.1 till 13.6 kan visas i praktiken. Efter Radera finns ingenting kvar i `sessionStorage` |
 | 10 | Kostnadsmätaren, inställningarna, README (nytt avsnitt om Bänkgrannen och om betald nyckel). Ändra också "Skaffa en gratis" i nyckelrutan i `index.html` | Mätaren visar kostnad per del. README och nyckelrutan beskriver läget, kortkommandona och nyckelkravet |
+
+### 15.1 Den smala versionen
+
+Till föredraget för programavdelningen, med rollen Dramaturgen. Hon lyssnar inte på seminariet. Hon hör bara det som sägs
+till henne när någon håller mellanslag eller talknappen, och hon kan ringa. Allt som rör öronen, minnet, snabbkollen,
+handen, ratten och Bänken väntar.
+
+| Steg | Innehåll | Klart när |
+|---|---|---|
+| S0 | Labbet, bara del (d): telefonen | Som i avsnitt 17.10 |
+| S1 | Sektion, tema, knapp i `.andra`, `#bankgrannen`, och ett förenklat gränssnitt: lampa (`REDO`, `HAR ORDET`, `I LUREN`), VU-mätare, **Håll för att prata**, **Tack, {PERSONA_NAME}** och telefonreglaget | Läget öppnas från AI-snack och via direktlänk |
+| S2 | Mikrofonkroken och återanvändbar VU (avsnitt 5 punkt 4 och 5) | Regressionstest som i steg 2 |
+| S3 | Underlaget (avsnitt 7) med rollval och omfånget *Bara på tilltal* | Kunskapsbasen för Robinson laddas, och rollen Dramaturgen väljs |
+| S4 | Rösten Per ordet med `{{SITUATION}}` = *Bara på tilltal*. Mellanslag öppnar `FRAGA` direkt, och sessionen hålls öppen så länge samtalet pågår (avsnitt 10.3, 10.5, 10.6). Samtalet mellan replikerna sparas i `bank.ownTurns` och en kort samtalslogg, som skickas med nästa gång hon får ordet | Hon presenterar sig enligt rollen, diskuterar en idé om Robinson på ett kvalificerat sätt och håller sig till kunskapsbasen |
+| S5 | Telefonen 8a och 8b (avsnitt 17): Lelle startar med R. Inte 8c | Som i steg 8a och 8b |
+| S6 | Integritet: startrutan med Dramaturgens startmanus (PROMPTER.md avsnitt 10), Avsluta och radering | Inget sparas efter Avsluta |
+
+Den smala versionen är en delmängd av den fulla. Inget i den behöver göras om när resten byggs.
 
 ## 16. Generalrepetition
 

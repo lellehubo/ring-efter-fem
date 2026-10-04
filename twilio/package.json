@@ -1,0 +1,16 @@
+{
+  "name": "bankgrannen-telefon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Telefontjänsten för Bänkgrannen i AI-snack: nyckel, telefonlista och uppringning via Twilio",
+  "scripts": {
+    "start": "twilio-run",
+    "deploy": "twilio-run deploy"
+  },
+  "dependencies": {
+    "@twilio/runtime-handler": "2.1.2"
+  },
+  "devDependencies": {
+    "twilio-run": "^4.0.0"
+  }
+}

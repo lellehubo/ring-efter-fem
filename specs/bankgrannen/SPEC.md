@@ -519,6 +519,11 @@ handen, ratten och Bänken väntar.
 
 Den smala versionen är en delmängd av den fulla. Inget i den behöver göras om när resten byggs.
 
+**Status 4 oktober 2026:** S1–S6 är byggda (`bankgrannen.js`, `bankgrannen-prompter.js`, `twilio/`) och testade med
+låtsas-Gemini, låtsas-Twilio och falsk mikrofon (`node tests/bankgrannen.cjs`, 102 kontroller). Samtalen mellan replikerna
+ligger i `bank.log`, som också är det som exporteras vid Avsluta. Kvar: S0, labbet mot riktiga Gemini och Twilio (17.10),
+och att hämta Twilios SDK till `vendor/`.
+
 ## 16. Generalrepetition
 
 1. **Med ljudfil:** kör en inspelning av ett tidigare föredrag genom testläget. Kontrollera:
@@ -622,13 +627,13 @@ Serverless Toolkit (`twilio serverless:deploy`). Hemligheter ligger i `twilio/.e
 
 | Funktion | Synlighet | Gör |
 |---|---|---|
-| `functions/token.js` | publik, kräver telefonnyckeln i headern `x-bank-key` | ger webbläsaren en tillfällig nyckel med `VoiceGrant` (bara utgående samtal via TwiML-appen, giltig 1 timme). CORS bara för `https://lellehubo.github.io` |
+| `functions/token.js` | publik, kräver telefonnyckeln i fältet `key` (vanlig formulär-POST, så att webbläsaren inte behöver fråga i förväg om CORS) | ger webbläsaren en tillfällig nyckel med `VoiceGrant` (bara utgående samtal via TwiML-appen, giltig 1 timme). CORS bara för `https://lellehubo.github.io` |
 | `functions/kontakter.js` | publik, kräver telefonnyckeln | returnerar telefonlistan **utan nummer**: `[{ id, namn, roll, arende }]` |
 | `functions/ring.protected.js` | skyddad (kräver Twilios signatur) | TwiML-appens röstadress. Slår upp `kontakt` i listan och svarar med `<Dial callerId="…" answerOnBridge="true" timeout="30" timeLimit="480"><Number>…</Number></Dial>`. Okänd kontakt ger `<Reject/>` |
 
-**Miljövariabler:** `API_KEY_SID`, `API_KEY_SECRET`, `TWIML_APP_SID`, `CALLER_ID`, `BANK_KEY` (telefonnyckeln) och `CONTACTS`:
+**Miljövariabler:** `API_KEY_SID`, `API_KEY_SECRET`, `TWIML_APP_SID`, `CALLER_ID`, `BANK_KEY` (telefonnyckeln, minst 16 tecken), `ALLOWED_ORIGINS` och `CONTACTS`:
 JSON med `[{ id, namn, nummer, roll, arende, samtycke }]`, där nummer anges i formatet +46… och `samtycke` är datumet då personen sa ja.
-**Numren finns bara här.** Webbläsaren, repot och Birgitta ser dem aldrig.
+**Numren finns bara här.** Webbläsaren, repot och Birgitta ser dem aldrig. Kontakter utan giltigt nummer eller utan `samtycke` tas bort av funktionerna, och `/ring` avvisar anrop som inte kommer från `client:bankgrannen`. Steg för steg: `twilio/README.md`.
 
 **I Twilio-konsolen:**
 - skapa en API-nyckel och en TwiML-app vars röstadress pekar på `/ring`
@@ -645,7 +650,7 @@ JSON med `[{ id, namn, nummer, roll, arende, samtycke }]`, där nummer anges i f
 
 - **SDK:** Twilio Voice JavaScript SDK 2.x. Twilio har ingen CDN för version 2, så `dist/twilio.min.js` från en låst version
   (GitHub-release eller npm-paketet `@twilio/voice-sdk`) läggs i `vendor/twilio.min.js` och laddas med en vanlig `<script>`.
-  Versionen måste stödja AudioProcessor.
+  Versionen måste stödja AudioProcessor. `node tools/hamta-twilio-sdk.mjs` hämtar 2.18.5 från npm, kontrollerar summan och lägger filen rätt.
 - **Device:** `new Twilio.Device(token, { edge: ['dublin', …] })` med europeiska kantnoder (kontrollera namnen i Twilios lista).
   Ingen `register()`, eftersom inga samtal tas emot.
 - **Ut på linjen:** en lokal `AudioProcessor` (`device.audio.addProcessor(…)`) vars `createProcessedStream` returnerar strömmen från

@@ -4,6 +4,11 @@
 *.env
 secrets/
 vault-*.env
+!.env.example
+
+# Twilio-funktionernas lokala byggfiler
+twilio/node_modules/
+twilio/.twiliodeployinfo
 
 # OS / editor
 .DS_Store

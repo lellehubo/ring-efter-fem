@@ -277,6 +277,7 @@
   <div class="andra" aria-label="Andra samtal">
     <button type="button" data-goto="efterfem">Efter fem</button>
     <button type="button" data-goto="ai">von Essen</button>
+    <button type="button" data-goto="bankgrannen">Bänkgrannen</button>
   </div>
 
   <!-- Hemskärm -->
@@ -385,7 +386,7 @@
   <div class="overlay" id="overlay">
     <div class="sheet">
       <h2>Gemini API-nyckel</h2>
-      <p>Klistra in din nyckel. Den sparas bara i den här webbläsaren (localStorage) — aldrig i sidan eller i git. Skaffa en gratis på <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.</p>
+      <p>Klistra in din nyckel. Den sparas bara i den här webbläsaren (localStorage) — aldrig i sidan eller i git. Skaffa en på <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Används appen av personer i EU krävs en betald nyckel enligt Googles villkor: sätt ett spendtak på den.</p>
       <label for="keyInput">Nyckel</label>
       <div class="field">
         <input id="keyInput" type="password" placeholder="AIza…" autocomplete="off" spellcheck="false" />
@@ -948,6 +949,18 @@ const SECTIONS = {
     greeting: '[En ny besökare har kommit fram till datorn. Säg din första replik enligt instruktionen, ordagrant eller nästan.]',
     badge: 'Du pratar med en AI · byggd av Lennart Hultman-Boye · ljudet behandlas av Google',
   },
+  // Bänkgrannen: ett eget läge i bankgrannen.js (specs/bankgrannen/). Röst och persona
+  // kommer från rollen; fälten här används bara av det gemensamma skalet.
+  bankgrannen: {
+    title: 'BÄNKGRANNEN',
+    tagline: 'En AI på seminariet',
+    voice: 'Gacrux',
+    systemInstruction: null,
+    idleLine: 'Redo',
+    idleSub: 'Förbered seminariet och börja',
+    greeting: null,
+    badge: 'Du pratar med en AI · det du säger till henne behandlas av Google · inget ljud sparas',
+  },
 };
 let activeId = 'efterfem';
 function section(){ return SECTIONS[activeId]; }
@@ -1017,6 +1030,10 @@ function setCallState(s){
 }
 
 function openSettings(){
+  if(activeId === 'bankgrannen' && typeof bankOpenSettings === 'function'){ bankOpenSettings(); return; }
+  openKeySheet();
+}
+function openKeySheet(){
   els.keyInput.value = getKey();
   els.savedMsg.textContent = '';
   els.metaLine.textContent = `Modell: ${MODEL_NAME} · Röst: ${section().voice}`;
@@ -1053,10 +1070,12 @@ function openSection(id){
   if(section().badge) els.badge.lastChild.textContent = section().badge;
   setCallState('idle');
   applyIdleStatus();
+  if(typeof onSectionOpen === 'function') onSectionOpen(id);
 }
 
 function goHome(){
   // Startsidan är AI-snack. De andra samtalen nås via de små knapparna.
+  if(typeof onLeaveSection === 'function' && onLeaveSection() === false) return;
   if(callState !== 'idle') endCall();
   openSection('drom');
   return;
@@ -1452,7 +1471,7 @@ els.clear.addEventListener('click', () => {
   els.savedMsg.style.color = 'var(--muted)';
   els.savedMsg.textContent = 'Nyckeln rensad.';
 });
-document.addEventListener('keydown', (e) => { if(e.key === 'Escape'){ if(els.overlay.classList.contains('open')) closeSettings(); else if(!els.viewCall.hidden) goHome(); } });
+document.addEventListener('keydown', (e) => { if(activeId === 'bankgrannen') return; if(e.key === 'Escape'){ if(els.overlay.classList.contains('open')) closeSettings(); else if(!els.viewCall.hidden) goHome(); } });
 window.addEventListener('beforeunload', () => { if(callState !== 'idle') cleanup(); });
 
 /* ------------------------------------------------------------
@@ -1462,5 +1481,8 @@ window.addEventListener('beforeunload', () => { if(callState !== 'idle') cleanup
 goHome();
 if(location.hash && SECTIONS[location.hash.slice(1)]) openSection(location.hash.slice(1));
 </script>
+<!-- Bänkgrannen: läget, dess promptar (genererade ur specs/bankgrannen/PROMPTER.md) -->
+<script src="bankgrannen-prompter.js"></script>
+<script src="bankgrannen.js"></script>
 </body>
 </html>
